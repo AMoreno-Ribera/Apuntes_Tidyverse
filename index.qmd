@@ -1,0 +1,3620 @@
+---
+title: "Apuntes clase"
+author: "Almudena Moreno Ribera"
+format: 
+  html:
+    theme: [style.scss]
+    toc: true
+    toc-location: left
+    toc-title: Índice
+    toc-depth: 4
+---
+
+```{r}
+#| include: false
+#| warning: false
+library(tidyverse)
+library(lubridate)
+library(glue)
+library(microbenchmark) # Para comparar tiempo de funciones
+library(gapminder)
+library(scales)
+library(ggthemes)
+library(showtext) # Cambiar el tipo de letra en los gráficos
+library(sysfonts) # Cambiar el tipo de letra en los gráficos
+library(skimr) # Librería para análisis exploratorio mucho mejor que con summary(), también da información de los missing y un poco más de info en las categóricas
+```
+
+Apuntes realizados por Almudena Moreno Ribera para la asignatura de Software Estadístico para la gestión de bases de datos en el máster oficial de Bioestadística de la Universidad Complutense de Madrid.
+
+# Introducción y curiosidades de R
+
+## Paste vs glue
+
+```{r}
+# library(glue)
+
+nombre <- "Almudena"
+
+glue("Hola, me llamo {nombre}")
+paste("Hola, me llamo", nombre)
+```
+
+Con la función paste es necesario abrir y cerrar las comillas cada vez que se quiera añadir una variable.
+
+Una ventaja del paste es que se puede elegir el separador:
+
+```{r}
+paste("a","b", sep = "*")
+```
+
+## Trabajo con fechas
+
+NOTA: para más información consultar la ficha del paquete
+
+```{r}
+library(lubridate) # Este paquete está incluído en tidyverse por lo que cuando se carge este no será necerasio cargar el de lubridate
+```
+
+```{r}
+fecha_char <- "1999-12-24"
+fecha <- as_date(fecha_char)
+# fecha_char + 1 # Da error porque lo entiende como un caracter
+fecha + 1 # Suma 1 a la fecha 
+
+
+today()
+now()
+
+# Para que empiece a contar el día de la semana en lunes en vez de en domingo
+wday(fecha, week_start = 1)
+```
+
+## Tu turno 2: fechas
+
+```{r}
+edad <- 23
+nombre <- "Almudena"
+hermanos <- FALSE
+fecha_nacimiento <- as_date("1999-12-24")
+apellidos <- "Moreno Ribera"
+nombre_completo <- glue("{nombre} {apellidos}")
+today() - fecha_nacimiento
+
+# Extra sumar horas
+now() + hours(2)
+```
+
+## Trabajo con incidencias acumuladas
+
+Funciones cumsum y diff interesantes para trabajar con incidencias acumuladas
+
+## Comparar dos funciones
+
+```{r}
+x <- c(4,-3,0,1)
+sort(x)
+order(x)
+x[order(x)]
+
+microbenchmark::microbenchmark(sort(x),x[order(x)], times = 1e3)
+
+y <- rnorm(n = 1e3)
+microbenchmark::microbenchmark(sort(y),x[order(y)], times = 1e3)
+```
+
+# Vectores y operaciones lógicas básicas
+
+```{r}
+# Sentencias que sirven para lo mismo
+all(x > 0)
+sum(x > 0) == length(x)
+
+# También se puede usar any()
+```
+
+## Tu turno 3: vectores
+
+```{r}
+x <- seq(from = 1, l = 5 , by = 2) 
+sum(x)
+x[x > 4]
+sum(x[x > 4])
+1/x
+sort(1/x)
+min(x)
+max(x)
+x[x > 1 & x < 7]
+all(x > 0)
+x <- c(1, -5, 8, NA, 10, -3, 9)
+x[c(1,2,5,6)]
+x <- x[-2]
+sum(x)
+mean(x)
+sum(x, na.rm = TRUE)
+mean(x, na.rm = TRUE)
+```
+
+# Operaciones con matrices
+
+```{r}
+edades <- sample(20:90, 5)
+estaturas <- sample(150:190, 5)
+nombres <- c("a", "b", "c", "d", "e")
+x <- cbind(edades, estaturas)
+y <- rbind(edades, estaturas)
+apply(x, MARGIN = 2, FUN = "mean", na.rm = TRUE)
+```
+
+## Tu turno 4: matrices (no sale)
+
+# Creación de un data.frame
+
+```{r}
+data.frame(nombres, edades, estaturas)
+```
+
+# Iniciación a objeto tibble
+
+La ventaja de este objeto frente a data.frame:
+
+-   Es más rápido
+
+-   Tiene carga inteligente de datos (si tienes algo de tipo fecha lo convierte directamente sin tener que indicarselo)
+
+-   Puede crear nuevas variables a partir de otras que están siendo definadas en el acto (ver ejemplo)
+
+-   Si llamas a una variable que no existe tibble emite un warning al contratio que data.frame
+
+-   El tibble también puede definirse por filas en vez de por columnas
+
+```{r}
+library(tidyverse)
+
+tibble("estatura" = c(160,165,170),
+       "peso" = c(70,80,90),
+       "IMC" = peso / ((estatura/100)^2))
+
+```
+
+Addin que complementa muy bien a los tibble ya que permite copiar cualquier tabla que esté en formato pdf (sobre todo muy útil para datos del ámbito público) y transcribirlo a formato tibble:
+
+```{r}
+# install.packages("datapasta")
+
+# tibble::tribble(~Paises, ~Población,     ~I1,    ~I2,      ~I3,
+#                "UE",  "447.007.596",   "100",  "100",     1090,
+#          "Alemania",   "83 614 362", "18,71",  "8,1",     2352,
+#           "Austria",    "8 932 664",  "1,90",  "1,9",     1076,
+#           "Bélgica",   "11 566 041",  "2,59",  "0,7",     3773,
+#          "Bulgaria",    "6 916 548",  "1,55",  "2,5",      634,
+#   "República Checa",   "10 701 777",  "2,39",  "1,8",     1382,
+#            "Chipre",      "896 005",  "0,20",  "0,2",      957,
+#           "Croacia",    "4 036 355",  "0,90",  "1,3",      728,
+#         "Dinamarca",    "5 840 045",  "1,31",  "1,0",     1385,
+#        "Eslovaquia",    "5 459 781",  "1,22",  "1,1",     1120,
+#         "Eslovenia",    "2 108 977",  "0,47",  "0,5",     1037,
+#            "España",   "47 394 223", "10,60", "11,4",      938,
+#           "Estonia",    "1 330 068",  "0,30",  "1,0",      305,
+#         "Finlandia",    "5 533 793",  "1,24",  "7,6",      182,
+#         "Francia",   "67 439 599", "15,09", "14,6",     1061,
+#            "Grecia",   "10 682 547",  "2,39",  "3,0",      824,
+#           "Hungría",    "9 730 772",  "2,18",  "2,1",     1071,
+#           "Irlanda",    "5 006 907",  "1,12",  "1,6",      719,
+#            "Italia",   "59 257 566", "13,26",  "6,8",     2015,
+#           "Letonia",    "1 893 223",  "0,42",  "1,5",      302,
+#          "Lituania",    "2 795 680",  "0,63",  "1,5",      446,
+#        "Luxemburgo",      "634 730",  "0,14",  "0,1",     2398,
+#             "Malta",      "516 100",  "0,12",  "0,0",    15951,
+#      "Países Bajos",   "17 475 415",  "3,91",  "0,9",     5073,
+#           "Polonia",   "37 840 001",  "8,47",  "7,1",     1236,
+#          "Portugal",   "10 298 252",  "2,30",  "2,1",     1130,
+#           "Rumania",   "19 186 201",  "4,29",  "5,4",      827,
+#            "Suecia",   "10 379 295",  "2,32", "10,2",      252
+#   )
+```
+
+## Tu turno 5: tibble selección de filas y columnas
+
+Carga del paquete {datasets} el conjunto de datos airquality (variables de la calidad del aire de Nueva York desde mayo hasta septiembre de 1973). ¿Es el conjunto de datos airquality de tipo tibble?
+
+```{r}
+airquality <- datasets::airquality
+class(airquality)
+airquality <- as_tibble(airquality)
+```
+
+Una vez convertido a tibble obtén el nombre de las variables y las dimensiones del conjunto de datos. ¿Cuántas variables hay? ¿Cuántos días se han medido?
+
+```{r}
+names(airquality)
+dim(airquality)
+```
+
+Filtra solo los datos del mes de agosto.
+
+```{r}
+airquality %>%
+  filter(Month == 8)
+airquality[airquality$Month == 8, ]
+```
+
+Selecciona aquellos datos que no sean ni de julio ni de agosto.
+
+```{r}
+airquality %>%
+  filter(Month != 7 & Month != 8)
+airquality %>%
+  filter(!(Month %in% c(7,8)))
+
+airquality[airquality$Month != 7 & airquality$Month != 8, ]
+```
+
+Modifica el siguiente código para quedarte solo con las variable de ozono y temperatura.
+
+```{r}
+airquality %>%
+  select("Ozone", "Temp")
+airquality[ , c("Ozone", "Temp")]
+```
+
+Selecciona los datos de temperatura y viento de agosto. Traduce a castellano el nombre de las columnas del conjunto filtrado.
+
+```{r}
+airquality[airquality$Month == 8, c("Temp", "Wind")]
+names(airquality) <- c("ozono", "rad_solar", "viento", "temp", "mes", "dia") 
+
+# filtrado <- airquality[airquality$Month == 8, c("Temp", "Wind")]
+# names(filtrado) <- c("Temperatura", "Viento") 
+```
+
+# Tidy Data
+
+**Reglas del tidy data**
+
+1.  Cada variable en una única columna
+
+2.  Cada individuo en una fila diferente
+
+3.  Cada celda con un único valor
+
+4.  Cada dataset en un tibble
+
+5.  Si queremos cruzar múltiples tablas debemos tener una columna común
+
+**Ejemplos**
+
+```{r}
+table4a
+```
+
+Esta tabla incumple una de las reglas del tidy data, ya que hay dos variables para indicar el número de casos pudiendo estar en una única columna y haciendo otra variable para indicar el año. (Regla número 1)
+
+¿Cómo se arregla?
+
+```{r}
+(table4a |> pivot_longer(cols = c("1999", "2000"), 
+                        names_to = "year",
+                        values_to = "cases")) 
+```
+
+```{r}
+table2
+```
+
+Ahora lo que tenemos es dos variables en una misma columna o también se puede interpretar como que hay información de un mismo individuo en dos filas diferentes. Por lo que se incumplen las reglas 1 y 2.
+
+¿Cómo se arregla?
+
+```{r}
+(table2 |> pivot_wider(names_from = "type", 
+                      values_from = "count"))
+```
+
+La columna "rate" tiene dos valores en cada celda (se incumple la regla 3)
+
+```{r}
+table3
+```
+
+¿Cómo se arregla?
+
+```{r}
+(table3 |> 
+  separate(col = "rate", into = c("cases", "pop")))
+```
+
+R sabe por donde tiene que separar pero ha tomado los casos y la población como variables de tipo caracter, esto se arregla añadiendole convert = TRUE a la función:
+
+```{r}
+(table3 |> 
+  separate(col = "rate", into = c("cases", "pop"), convert = TRUE))
+```
+
+A pesar de que R hace una separación "inteligente" nosotros podemos indicarle por donde tiene que hacer la separación e incluso cuantas separaciones queremos y donde:
+
+```{r}
+(table3 |> 
+  separate(col = "year", into = c("century", "year"), sep = 2))
+
+(table3 |> 
+  separate(col = "year", into = c("century", "year", "c"), sep = c(2,3)))
+```
+
+```{r}
+table5
+```
+
+A pesar de que nos podría interesar tener el siglo y el año por separado vamos a unirlo en una única variable:
+
+```{r}
+(table5 |> 
+  unite(col = "all_year", "century", "year"))
+```
+
+Como se puede ver siempre que se unen variables se hace con \_ pero le podemos indicar a R que use el separador que más nos convenga a nosotros, en este caso:
+
+```{r}
+(table5 |> 
+  unite(col = "all_year", "century", "year", sep = ""))
+```
+
+## Tu turno 6: Tidy Data
+
+**Ejercicio 1** Echa un vistazo a la tabla table4b del paquete {tidyr}. ¿Es tidydata? En caso negativo, ¿qué falla? ¿Cómo convertirla a tidy data en caso de que no lo sea ya?
+
+```{r}
+table4b
+```
+
+No es tidy data ya que tiene una misma variable (poplación) en dos columnas diferentes. Lo que queremos es hacer más largo el data set -\> pivot_longer
+
+```{r}
+table4b |> pivot_longer(cols = c("1999", "2000"),
+                        names_to = "year",
+                        values_to = "population")
+```
+
+**Ejercicio 2** Echa un vistazo a la tabla relig_income del paquete {tidyr}. ¿Es tidydata? En caso negativo, ¿qué falla? ¿Cómo convertirla a tidy data en caso de que no lo sea ya?
+
+```{r}
+relig_income
+```
+
+No es tidy data ya que tiene una misma variable (income) en varias columnas diferentes. Lo que queremos es hacer más largo el data set -\> pivot_longer
+
+```{r}
+relig_income |> pivot_longer(cols = "<$10k":"Don't know/refused",
+                             names_to = "income", 
+                             values_to = "people")
+
+```
+
+**Ejercicio 3** Echa un vistazo a la tabla billboard del paquete {tidyr}. ¿Es tidydata? En caso negativo, ¿qué falla? ¿Cómo convertirla a tidy data en caso de que no lo sea ya?
+
+```{r}
+billboard
+```
+
+No es tidy data ya que tiene una misma variable (week) en varias columnas diferentes. Lo que queremos es hacer más largo el data set -\> pivot_longer
+
+```{r}
+billboard |> pivot_longer(cols = "wk1":"wk76",
+                          names_to = "week",
+                          names_prefix = "wk",
+                          values_to = "position",
+                          values_drop_na = TRUE)
+names(billboard)
+```
+
+# Importar datos
+
+## Nativos de R
+
+```{r}
+load("./datos/titanic.RData")
+as_tibble(titanic)
+```
+
+```{r}
+load("./datos/rotterdam_breast_cancer.rda")
+as_tibble(rotterdam)
+```
+
+```{r}
+lung_cancer <-
+  readRDS(file = "./datos/NCCTG_lung_cancer.rds") |> as_tibble()
+```
+
+## Datos rectangulares (sin formato)
+
+**Tabulados**: .csv y .tsv
+
+```{r}
+chickens <- readr::read_csv(file = "./datos/chickens.csv")
+chickens
+```
+
+Normalmente read_csv() asigna automáticamente el formato de las variables:
+
+```{r}
+spec(chickens)
+```
+
+A pesar de esto se lo podemos indicar nosotros:
+
+```{r}
+#| eval: false
+chickens <-
+  read_csv(file = "./datos/chickens.csv",
+           col_types = list(col_character(), col_factor(), col_double(), col_character()),
+           col_select = c(chicken, sex, eggs_laid))
+chickens
+```
+
+**Sin tabular**: .txt
+
+-   read_csv2() cuando el separador sea el punto y coma
+
+-   read_tsv() cuando el sea un tabulador
+
+-   read_table() cuando el sea un espacio
+
+-   read_delim() en general
+
+```{r}
+datos_txt <- read_table(file = "./datos/massey-rating.txt")
+as_tibble(datos_txt)
+```
+
+## Datos de excel
+
+-   read_xls() específica para .xls
+
+-   read_xlsx() específica para .xlsx
+
+-   read_excel(): para ambas
+
+```{r}
+deaths <- readxl::read_xlsx(path = "./datos/deaths.xlsx")
+deaths
+```
+
+Para saltarnos las primeras filas
+
+```{r}
+deaths <- readxl::read_xlsx(path = "./datos/deaths.xlsx", skip = 4)
+deaths
+```
+
+Para asignar manualmente el nombre de las variables
+
+```{r}
+deaths <-
+  readxl::read_xlsx(path = "./datos/deaths.xlsx",
+            skip = 5,
+            col_names = c("name", "profession", "age", "kids", "birth", "death"))
+deaths
+```
+
+Para cuando las fechas están mal formateadas
+
+```{r}
+library(openxlsx)
+deaths$death <- convertToDate(deaths$death)
+deaths
+```
+
+Cargar un Excel con varias hojas (normalmente excel toma la primers)
+
+```{r}
+mtcars <- readxl::read_xlsx(path = "./datos/datasets.xlsx", sheet = "mtcars")
+mtcars
+iris <- readxl::read_xlsx(path = "./datos/datasets.xlsx", sheet = "iris", range = "C1:E4")
+iris
+```
+
+## Datos SAS/STATA/SPSS
+
+```{r}
+library(haven)
+
+# SAS
+iris_sas <- read_sas(data_file = "./datos/iris.sas7bdat")
+
+# SPSS
+iris_spss <- read_sav(file = "./datos/iris.sav")
+
+# Stata
+iris_stata <- read_dta(file = "./datos/iris.dta")
+```
+
+## Desde web
+
+```{r}
+#| error: true
+covid_datos <-
+  read_csv(file = "https://cnecovid.isciii.es/covid19/resources/casos_hosp_uci_def_sexo_edad_provres.csv", n_max = 700)
+covid_datos
+```
+
+## Desde google drive
+
+```{r}
+#| eval: false
+library(googlesheets4)
+google_sheet <-
+  read_sheet("https://docs.google.com/spreadsheets/d/1n_UTbD93-oDJR2r-rsMNff5ro147NL_ZN_vYIA2eJ3Q/edit?usp=sharing")
+google_sheet
+```
+
+## Desde API
+
+```{r}
+#| eval: false
+
+library(owidR)
+owid_covid()
+```
+
+Este paquete tiene la función owid_search() para buscar datasets por palabras clave, por ejemplo, emissions, dándonos un dataset con el título de la base de datos y su id para luego usarla.
+
+```{r}
+#| eval: false
+
+as_tibble(owid_search("emissions"))
+```
+
+Vamos a pedirle por ejemplo las emisiones de la oecd
+
+```{r}
+#| eval: false
+
+owid("emissions-of-air-pollutants-oecd")
+```
+
+**aemet** En muchas ocasiones para conectar con la API tendremos antes que registrarnos y obtener una clave, es el caso del paquete {climaemet} para acceder a datos meteorológicos (https://opendata.aemet.es/centrodedescargas/inicio)
+
+Una vez que tenemos la clave de la API la registramos en nuestro RStudio para poder usarla a futuro
+
+```{r}
+#| eval: false
+
+library(climaemet)
+
+# Definir la clave
+apikey <- "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqYXZhbHYwOUB1Y20uZXMiLCJqdGkiOiI4YTU1ODUxMS01MTE3LTQ4MTYtYmM4OS1hYmVkNDhiODBkYzkiLCJpc3MiOiJBRU1FVCIsImlhdCI6MTY2NjQ2OTcxNSwidXNlcklkIjoiOGE1NTg1MTEtNTExNy00ODE2LWJjODktYWJlZDQ4YjgwZGM5Iiwicm9sZSI6IiJ9.HEMR77lZy2ASjmOxJa8ppx2J8Za1IViurMX3p1reVBU"
+
+aemet_api_key(apikey, install = TRUE)
+```
+
+Con dicho paquete podemos hacer una búsqueda de estaciones para conocer tanto su código postal como su código identificador dentro de la red AEMET (por ejemplo, la estación del aeropuerto de El Prat, Barcelona, es el código "0076")
+
+```{r}
+#| eval: false
+
+stations <- aemet_stations()
+stations
+```
+
+```{r}
+#| eval: false
+
+aemet_last_obs("0076")
+```
+
+**catastro**
+
+También puedes conectar con la API del catrastro y buscar por ejemplo por coordenadas
+
+```{r}
+#| eval: false
+
+library(CatastRo)
+catr_ovc_get_rccoor(lat = 38.61965, lon = -3.45624, srs = "4230")
+```
+
+# Exportar datos
+
+## Nativos de R
+
+```{r}
+tabla <- tibble("a" = 1:4, "b" = 1:4)
+save(tabla, file = "./datos/tabla_prueba.RData")
+rm(tabla) # eliminar
+load("./datos/tabla_prueba.RData")
+tabla
+```
+
+## Datos rectangulares
+
+```{r}
+write_csv(tabla, file = "./datos/tabla_prueba.csv")
+read_csv(file = "./datos/tabla_prueba.csv")
+```
+
+## Tu turno 7: lectura de datos
+
+El dataset who que hemos usado en ejercicios anteriores, expórtalo a un formato nativo de R en la carpeta datos del proyecto
+
+```{r}
+library(tidyr)
+save(who, file = "./datos/who.RData")
+```
+
+Carga el dataset who pero desde la carpeta de datos (importa el archivo creado en el ejercicio anterior)
+
+```{r}
+load("./datos/who.RData")
+```
+
+Repite lo mismo (exportar e importar) en 4 formatos: .csv, .xlsx, .sav (spss) y .dta (stata)
+
+```{r}
+# csv
+library(readr)
+write_csv(who, file = "./datos/who.csv")
+who_data <- read_csv(file = "./datos/who.csv")
+
+# excel
+library(openxlsx)
+library(readxl)
+write.xlsx(who, file = "./datos/who.xlsx")
+who_data <- read_xlsx(path = "./datos/who.xlsx")
+
+# sas y stata
+library(haven)
+write_sav(who, path = "./datos/who.sav")
+who_data <- read_spss(file = "./datos/who.sav")
+
+write_dta(who, path = "./datos/who.dta")
+who_data <- read_dta(file = "./datos/who.dta")
+```
+
+Repite la carga del who.csv pero solo selecciona ya en la carga las 4 primeras columnas
+
+```{r}
+who_select <-
+  read_csv(file = "./datos/who.csv",
+           col_select = c("country", "iso2", "iso3", "year"))
+```
+
+\newpage
+
+# Tidyverse: operaciones por filas
+
+## Introducción
+
+Operaciones que se pueden hacer por filas:
+
+-   Seleccionar / Filtrar (muestreo)
+
+-   Ordenar
+
+-   Limpieza de valores ausentes
+
+-   Añadir/cambiar
+
+-   Eliminar registros duplicados (por ejemplo que no haya dos DNI)
+
+Trabajamos con la base de datos *starwars*
+
+```{r}
+starwars
+```
+
+Base de datos con 87 registros y 14 variables, hay ausentes y variables de todo tipo (incluído lista)
+
+## Muestreo
+
+Una de las operaciones más comunes es lo que se conoce en estadística como muestreo: una selección o filtrado de registros (una submuestra)
+
+-   No aleatorio (por cuotas); se realiza con filter()
+
+-   No aleatorio (intencional/discreccional); slice()
+
+-   Aleatorio simple; slice_sample()
+
+-   Aleatorio estratificado; group_by() + slice_sample()
+
+### Muestreo no aleatorio por cuotas: filter()
+
+Seleccionamos a aquellos personajes que miden más de 1,60
+
+```{r}
+starwars |> 
+  filter(height > 160)
+```
+
+Seleccionamos a aquellos personajes que pesen menos de 60 y midan más de 1,60
+
+```{r}
+starwars |> 
+  filter(mass < 60 & height > 160) 
+```
+
+Seleccionamos a aquellos personajes que tengan los ojos de color azul o amarillo.
+
+```{r}
+starwars |> 
+  filter(eye_color %in% c("blue", "yellow"))
+```
+
+Ahora seleccionamos a todos los personajes menos los que tienen ojos azules o amarillos.
+
+```{r}
+starwars |> 
+  filter(!(eye_color %in% c("blue", "yellow")))
+```
+
+Todos aquellos que tengan la piel verde. Se hace con str_detect porque hay personajes que tienen dos colores.
+
+```{r}
+starwars |> 
+  filter(str_detect(skin_color, "green"))
+```
+
+Todos los personajes cuyo peso esté entre 150 y 170
+
+```{r}
+starwars |> 
+  filter(between(mass, 150, 170)) #Están incluídos los extremos: [150, 170]
+```
+
+Para quitar los valores ausentes se puede hacer de dos maneras:
+
+```{r}
+starwars |> 
+  filter(!is.na(mass))
+
+starwars |> 
+  drop_na(mass, height)
+```
+
+Si no le indicas variable elimina todas aquellas filas en las que no se tenga datos para todas las columnas.
+
+### Tu turno 8: tidyverse filas
+
+Selecciona del conjunto de starwars solo los personajes que sean androides o cuyo valor en species sea desconocido
+
+```{r}
+starwars |> 
+  filter(species %in% c("Droid", NA))
+
+starwars |>
+  filter(species == "Droid" | is.na(species))
+```
+
+Selecciona del conjunto de starwars solo los personajes cuyo peso esté entre 65 y 90 kg.
+
+```{r}
+starwars |> 
+  filter(between(mass, 65, 90))
+```
+
+Tras limpiar de ausentes en todas las variables, selecciona del conjunto de starwars solo los personajes que sean humanos y que vengan de Tatooine
+
+```{r}
+starwars |> 
+  drop_na() |> 
+  filter(species == "Human" & homeworld == "Tatooine")
+```
+
+Selecciona del conjunto original de starwars los personajes no humanos, male en el sexo y que midan entre 120 y 170 cm, o los personajes con ojos marrones o rojos.
+
+```{r}
+starwars |> 
+  filter((species != "Human" & 
+           gender == "masculine" &
+           between(height, 120, 170)) | 
+         eye_color %in% c("brown", "red"))
+```
+
+Busca información en la ayuda de la función str_detect() del paquete {stringr} (cargado en {tidyverse}). Consejo: prueba antes las funciones que vayas a usar con algún vector de prueba para poder comprobar su funcionamiento. Tras saber lo que hace, filtra solo aquellos personajes con apellido Skywalker
+
+```{r}
+starwars |> filter(str_detect(name, "Skywalker"))
+```
+
+### Muestreo no aleatorio intencional: slice()
+
+Para sacar el individuo número 7 (o cualquier otro).
+
+```{r}
+starwars |> 
+  slice(7)
+```
+
+Para sacar una lista de individuos concreta.
+
+```{r}
+starwars |> 
+  slice(3:7)
+```
+
+Seleccionar todos los individuos menos los seleccionados.
+
+```{r}
+starwars |> 
+  slice(-c(2,4,5))
+```
+
+Seleccionar los n (7) primeros individuos.
+
+```{r}
+starwars |> 
+  slice_head(n = 7)
+```
+
+Seleccionar el primer 10% de los individuos.
+
+```{r}
+starwars |> 
+  slice_head(prop = 0.1)
+```
+
+Seleccionar los n últimos individuos.
+
+```{r}
+starwars |> 
+  slice_tail(n = 8)
+```
+
+Seleccionar los n mayores individuos de alguna de las variables.
+
+```{r}
+starwars |> 
+  slice_max(order_by = height, n = 5)
+```
+
+¡¡¡Cuidado con los empates!!! Si hay un empate y no le indicamos como queremos que resuelva los empates coge el primero de los dos. Para que nos muestre todos si hay un empate hay que indicarle with_ties = TRUE
+
+```{r}
+starwars |> 
+  slice_min(order_by = height, n = 4)
+
+starwars |> 
+  slice_min(order_by = height, n = 5)
+```
+
+```{r}
+starwars |> 
+  slice_min(mass, n=4, with_ties = TRUE)
+```
+
+### Muestreo aleatorio simple: slice_sample()
+
+El conocido como muestreo aleatorio simple se basa en seleccionar individuos aleatoriamente, de forma que cada uno tenga ciertas probabilidades de ser seleccionado. Con slice_sample(n = ...) podemos extraer n registros aleatoriamente (a priori equiprobables).
+
+Extraemos una muestra aleatoria del 5% de la población (los individuos son equiprobables).
+
+```{r}
+starwars |> 
+  slice_sample(prop = 0.05)
+```
+
+Extraemos una muestra de 5 individuos pero ahora a cada individuo dentro de la problación le asignamos un peso diferente y permitimos el reemplazamiento. El peso se le puede asignar a partir de un vector que creamos o ponderar por otra variable.
+
+NOTA: si se pondera por otra variable hay que tener cuidado de que no presente NA's.
+
+NOTA 2: si se pondera por otra variable hay que tener en cuenta que se les asigna más peso a los números más grandes. Por ejemplo si se pondera por el peso se está haciendo que aquellos que sean más pesados sean más probables de salir.
+
+```{r}
+starwars |> 
+  slice_sample(n = 5, replace = TRUE, weight_by = c(0.49, 0.49, rep(0.02/85, 85)))
+
+starwars |> 
+  drop_na(mass) |> 
+  slice_sample(n = 5, replace = TRUE, weight_by = mass)
+```
+
+### Ejemplo simulación
+
+if_else() vs case_when() vs sample() vs slice_sample()
+
+```{r}
+Nnum <- 1000
+U <- runif(n = Nnum)
+
+progenitores <- ifelse(U <= 0.02, "11", 
+                       ifelse(U <= 0.1, "10",
+                       ifelse(U <= 0.2, "01", "00")))
+
+progenitores <- tibble("U" = runif(Nnum),
+                       "estado" = case_when(U <= 0.02 ~ "11",
+                                          U <= 0.1 ~ "10",
+                                          U <= 0.2 ~ "01",
+                                          TRUE ~ "00"))
+
+progenitores <- sample(c("11","10","01","00"), 
+                       1000, replace = TRUE, 
+                       prob = c(0.02,0.08,0.1,0.8))
+
+progenitores <- 
+  tibble("soporte" = c("11","10","01","00")) |> 
+  slice_sample(n = 1000, replace = TRUE, weight_by = c(0.02,0.08,0.1,0.8))
+```
+
+### Tu turno 9: trabajo con slice()
+
+Selecciona solo los personajes que sean humanos y de ojos marrones, para después ordernarlos en altura descendente y peso ascendente.
+
+```{r}
+starwars |> 
+  filter(species == "Human" & eye_color == "brown") |> 
+  arrange(desc(height), mass)
+```
+
+Extrae 3 registros aleatoriamente.
+
+```{r}
+starwars |> 
+  slice_sample(n = 3)
+```
+
+Extrae el 10% de los registros aleatoriamente.
+
+```{r}
+starwars |> 
+  slice_sample(prop = 0.1)
+```
+
+Extrae aleatoriamente 10 personajes pero de forma que la probabilidad de que salga cada uno sea proporcional a su peso (más pesados, más probable)
+
+```{r}
+starwars |> 
+  drop_na(mass) |> 
+  slice_sample(n = 10, weight_by = mass)
+```
+
+Selecciona los 3 personajes más mayores.
+
+```{r}
+starwars |> 
+  slice_max(n = 3, order_by = birth_year)
+```
+
+## Reordenar observaciones
+
+Ordenación por una variable de menor a mayor
+
+```{r}
+starwars |> arrange(mass) 
+```
+
+Ordenación por una variable de mayor a menor
+
+```{r}
+starwars |> arrange(desc(mass))
+```
+
+Ordenación por varias variables (rompiendo empates según el orden en el que se han puesto las variables de ordenación)
+
+```{r}
+starwars |> arrange(mass, desc(mass))
+```
+
+## Quitar duplicados
+
+Lo más útil de esta opción es cuando existe una variable identificador de los individuos como podría ser el DNI, número de pacientes, etc.
+
+```{r}
+starwars |> distinct(hair_color, skin_color, .keep_all = TRUE)
+```
+
+Si no se le añade el argumento `.keep_all = TRUE` solo saca aquellas variables que se han indicado.
+
+```{r}
+starwars |> distinct(hair_color, skin_color)
+```
+
+Esta opción también nos permite contar los valores únicos. Podría servir para contar por ejemplo el número de países en un conjunto de datos de tipo longitudinal (varios años para el mismo país).
+
+```{r}
+starwars |> distinct(hair_color) |> nrow()
+```
+
+## Añadir nuevos individuos
+
+```{r}
+datos <-
+  tibble("nombre" = c("javi", "laura"), "edad" = c(33, 50))
+
+datos |> 
+  bind_rows(tibble("nombre" = c("carlos", NA), "edad" = c(28, 32)))
+
+datos |> 
+  bind_rows(tibble("nombre" = c("carlos", NA), "cp" = c(28045, 28019)))
+```
+
+Hay que tener cuidado que las variables en las que se quiera hacer match tengan exactamente el mismo nombre.
+
+```{r}
+datos <-
+  tibble("nombre" = c("javi", "laura"), "edad" = c(33, 50))
+
+datos |> 
+  bind_rows(tibble("nombre" = c("carlos", NA), "Edad" = c(28, 32))) #|> View()
+```
+
+A diferencia de las matrices si se intenta unir dos variables que tienen diferentes tipos de datos va a dar error y no se va a ejecutar
+
+## Tu turno 10: operaciones con tidyverse
+
+> Para saber que valores únicos hay en el color de pelo, elimina duplicados de la variable hair_color, eliminando antes los ausentes de dicha variable.
+
+```{r}
+starwars |> 
+  drop_na(hair_color) |> 
+  distinct(hair_color)
+```
+
+> De los personajes que son humanos y miden más de 160 cm, elimina duplicados en color de ojos, elimina ausentes en peso, selecciona los 3 más altos, y orden de mayor a menor peso. Devuelve la tabla.
+
+```{r}
+starwars |> 
+  filter(species == "Human" & height > 160) |> 
+  distinct(eye_color, .keep_all = TRUE) |> 
+  drop_na(mass) |> 
+  slice_max(height, n = 3) |> 
+  arrange(desc(mass))
+```
+
+\newpage
+
+# Tidyverse: operaciones por columnas
+
+## Selección de columnas (variables)
+
+Selección de columnas
+
+```{r}
+starwars |> select(name, hair_color)
+```
+
+Selección como si fueran índices numéricos
+
+```{r}
+starwars |> select(name:eye_color) 
+```
+
+Deseleccionar variables
+
+```{r}
+starwars |>  select(-mass, -(eye_color:starships))
+```
+
+En el select también existe la posibilidad de ordenar de cierta forma las variables. Si se ponen primero las variables que se quieren seguido de la palabra reservada everything(), R comprende que a continuación debe poner todas aquellas columnas que no se habían indicado previamente.
+
+```{r}
+starwars |> select(mass, homeworld, everything())
+```
+
+También hay una palabra reservada para la última columna: last_col().
+
+```{r}
+starwars |> select(name:mass, homeworld, last_col())
+```
+
+También existe la posibilidad de seleccionar las variables en función de patrones de texto:
+
+-   que comiencen por un prefijo (starts_with())
+
+-   terminen con un sufijo (ends_with())
+
+-   contengan un texto (contains())
+
+-   cumplan una expresión regular (matches()).
+
+-   seleccionar por rango numérico si tenemos variables con un prefijo y números (num_range()).
+
+```{r}
+# variables cuyo nombre acaba en "color" y contengan sexo o género
+starwars |> select(ends_with("color"), matches("sex|gender"))
+```
+
+```{r}
+datos <-
+  tibble("semana1" = c(115, 141, 232), "semana2" = c(7, NA, 17),
+         "semana3" = c(95, 162, NA), "semana4" = c(11, 19, 15),
+         "semana5" = c(NA, 262, 190), "semana6" = c(21, 15, 23))
+datos |> select(num_range("semana", 1:4))
+```
+
+Por último también se pueden seleccionar las variables por tipo de datos (where())
+
+```{r}
+# Solo columnas numéricas o de texto
+starwars |> select(where(is.numeric) | where(is.character))
+```
+
+## Mover columnas
+
+La sentencia relocate() tiene los argumentos .before y .after.
+
+```{r}
+starwars |> relocate(species, .before = name)
+```
+
+## Renombrar columnas
+
+La sentencia rename() cambia los nombre de las variables siempre poniendose nombre_nuevo = nombre_antiguo.
+
+```{r}
+starwars |> rename(nombre = name, altura = height, peso = mass)
+```
+
+## Extraer variables en formato vector
+
+La sentencia pull() sirve para extraer la información de una de las columnas en formato vector. Esto puede ser interesante como línea final de toda una secuencia tidyverse en la que queremos extraer el vector final.
+
+```{r}
+starwars |> pull(name)
+```
+
+## Tu turno 11: seleccionar variables
+
+> Filtra el conjunto de personajes y quédate solo con aquellos que en la variable height no tengan un dato ausente. Con los datos obtenidos del filtro anterior, selecciona solo las variables name, height, así como todas aquellas variables que CONTENGAN la palabra color en su nombre.
+
+```{r}
+starwars |> 
+  drop_na(height) |> 
+  select(name, height, contains("color"))
+```
+
+> Con los datos obtenidos del ejercicio anterior, traduce el nombre de las columnas a castellano
+
+```{r}
+starwars |> 
+  drop_na(height) |> 
+  select(name, height, contains("color")) |> 
+  rename(nombre = name, 
+         altura = height, 
+         color_pelo = hair_color,
+         color_piel = skin_color,
+         color_ojos = eye_color)
+```
+
+> Con los datos obtenidos del ejercicio anterior, coloca la variable de color de pelo justo detrás de la variable de nombres.
+
+```{r}
+starwars |> 
+  drop_na(height) |> 
+  select(name, height, contains("color")) |> 
+  rename(nombre = name, 
+         altura = height, 
+         color_pelo = hair_color,
+         color_piel = skin_color,
+         color_ojos = eye_color) |> 
+  relocate(color_pelo, .after = nombre)
+```
+
+> Con los datos obtenidos del ejercicio anterior, comprueba cuántas modalidades únicas hay en la variable de color de pelo (sin usar unique()).
+
+```{r}
+starwars |> 
+  drop_na(height) |> 
+  select(name, height, contains("color")) |> 
+  rename(nombre = name, 
+         altura = height, 
+         color_pelo = hair_color,
+         color_piel = skin_color,
+         color_ojos = eye_color) |> 
+  relocate(color_pelo, .after = nombre) |> 
+  distinct(color_pelo) |> 
+  drop_na() # |> count() 
+# Añadir count si lo que se quiere con contar las categorías y no solo ver cuales hay
+```
+
+> Del conjunto de datos originales, elimina las columnas de tipo lista, y tras ello elimina duplicados en la variable eye_color. Tras eliminar duplicados extrae dicha columna en un vector.
+
+```{r}
+starwars |> 
+  select(-where(is.list)) |> 
+  distinct(eye_color, .keep_all = TRUE) |> 
+  pull(eye_color)
+```
+
+## Modificar o crear columnas
+
+Creamos una nueva variable
+
+```{r}
+starwars |> mutate(height_m = height / 100)
+```
+
+Las variables nuevas que creamos las colocamos antes o después de otras que queramos.
+
+```{r}
+starwars |> 
+  mutate(height_m = height / 100,
+         IMC = mass / (height_m^2), .before = name)
+```
+
+Cuando aplicamos mutate(), debemos de acordarnos que las operaciones se realizan de manera vectorial, elemento a elemento, por lo que la función que usemos dentro debe devolver un vector de igual longitud. En caso contrario, devolverá una constante
+
+```{r}
+starwars |> 
+  mutate(constante = mean(mass, na.rm = TRUE), .before = name)
+```
+
+## Recategorizar
+
+### if_else()
+
+Se emplea la expresión if_else combinada con mutate
+
+Por ejemplo queremos crear una nueva variable que nos indice si el individuo es de especie humana o no.
+
+```{r}
+starwars |> 
+  mutate(human = if_else(species == "Human", "Human", "Not Human"),
+         .after = name) |> 
+  select(name:mass)
+```
+
+En el caso de que quisieramos crear una variable de tipo lógico que nos devuelva TRUE si es humano y false si no lo es no sería necesario emplear el if_else
+
+```{r}
+starwars |> 
+  mutate(Human = (species == "Human"), 
+         .after = name)
+```
+
+Cuando queremos recategorizar pero la variable tiene más de 2 categorías se deben encadenar los if_else.
+
+```{r}
+starwars |> 
+  mutate(Estatura = if_else(height < 160, "Bajo", if_else(height < 180, "Alto", "Mediano")), 
+         .after = name) 
+```
+
+### case_when
+
+Cuando hay demasiadas categorías que hace imposible ir encadenado los if_else se emplea case_when
+
+Recategorizamos a los individuos en categorías dependiendo de su estatura
+
+```{r}
+starwars |> 
+  drop_na(height) |> 
+  mutate(altura = case_when(height < 120 ~ "enanos",
+                            height < 160 ~ "bajito",
+                            height < 180 ~ "normal",
+                            height < 200 ~ "alto",
+                            TRUE ~ "gigante"), .before = name)
+```
+
+NOTA: es importante deshacernos previamente de los NA porque si no según la sentencia del case_when aquellos que tuvieran valor NA en la altura se les categrizaría como gigantes.
+
+Si vemos esto más detenidamente:
+
+```{r}
+starwars |> 
+  mutate(Estatura = case_when(height < 160 ~ "Bajo",
+                              height < 180 ~ "Mediano",
+                              height >= 180 ~ "Alto"), 
+         .after = name) 
+```
+
+Cuidado con lo siguiente porque a los valores que son NA los asigna directamente como Alto
+
+```{r}
+starwars |> 
+  mutate(Estatura = case_when(height < 160 ~ "Bajo",
+                              height < 180 ~ "Mediano",
+                              TRUE ~ "Alto"), 
+         .after = name) 
+```
+
+Solución para lo anterior
+
+```{r}
+starwars |> 
+  mutate(Estatura = case_when(is.na(height) ~ NA,
+                              height < 160 ~ "Bajo",
+                              height < 180 ~ "Mediano",
+                              TRUE ~ "Alto"), 
+         .after = name) 
+```
+
+Las opciones correctas en este caso son la primera y la última.
+
+## Tu turno 12
+
+> Selecciona solo las variables nombre, altura y así como todas aquellas variables relacionadas con el color, a la vez que te quedas solo con aquellos que no tengan ausente en la altura.
+
+```{r}
+starwars |> 
+  select(name, height, contains("color")) |> 
+  drop_na(height)
+```
+
+> Con los datos obtenidos del ejercicio anterior, traduce el nombre de las columnas a castellano.
+
+```{r}
+starwars |> 
+  select(name, height, contains("color")) |> 
+  drop_na(height) |> 
+  rename(nombre = name, 
+         altura = height, 
+         color_pelo = hair_color,
+         color_piel = skin_color,
+         color_ojos = eye_color)
+```
+
+> Con los datos obtenidos del ejercicio anterior, coloca la variable de color de pelo justo detrás de la variable de nombres.
+
+```{r}
+starwars |> 
+  select(name, height, contains("color")) |> 
+  drop_na(height) |> 
+  rename(nombre = name, 
+         altura = height, 
+         color_pelo = hair_color,
+         color_piel = skin_color,
+         color_ojos = eye_color) |> 
+  relocate(color_pelo, .after = nombre)
+```
+
+> Con los datos originales, comprueba cuántas modalidades únicas hay en la variable de color de pelo.
+
+```{r}
+starwars |> 
+  distinct(hair_color) |> 
+  drop_na(hair_color) |> 
+  nrow() # si queremos que devuelva un vector
+
+starwars |> 
+  distinct(hair_color) |> 
+  drop_na(hair_color) |> # Se añade esta línea únicamente si no queremos que el valor NA cuente como modalidad de color de pelo
+  count() # si queremos que devuelva un tibble
+```
+
+> Del dataset original, selecciona solo las variables numéricas y de tipo texto. Tras ello define una nueva variable llamada under_18 que nos recategorice la variable de edad: TRUE si es menor de edad y FALSE en caso contrario
+
+```{r}
+starwars |> 
+  select(where(is.numeric), where(is.character)) |> 
+  mutate(under_18 = (birth_year < 18), .after = birth_year)
+
+starwars |> 
+  select(where(is.numeric) | where(is.character)) |> 
+  mutate(under_18 = birth_year < 18)
+```
+
+> Del dataset original, crea una nueva columna llamada auburn (cobrizo/caoba) que nos diga TRUE si el color de pelo contiene dicha palabra y FALSE en caso contrario (reminder str_detect()).
+
+```{r}
+starwars |> 
+  mutate(auburn = str_detect(hair_color, "auburn"), .after = hair_color)
+```
+
+> Del dataset original, incluye una columna que calcule el IMC. Tras ello, crea una nueva variable que valga NA si no es humano, delgadez por debajo de 18, normal entre 18 y 30, sobrepeso por encima de 30.
+
+```{r}
+starwars |> 
+  mutate(IMC = mass / (height/100)^2, .after = mass,
+         IMC_cat = case_when(is.na(IMC) | species != "Human" ~ NA,
+                             IMC < 18 ~ "Delgadez",
+                             IMC < 30 ~ "Normal",
+                             TRUE ~ "Sobrepeso")) #|> 
+  #select(IMC, IMC_cat, species)
+```
+
+\newpage
+
+# Generación de estadísticas y tablas resumen
+
+## Contar: count()
+
+Para contar frecuencias usamos la función count()
+
+Si lo empleamos sin indicarle ninguna variable nos indica el número de individuos. Hay que tener en cuenta que a diferencia de nrow() el objeto de salida de esta función es un tibble
+
+```{r}
+starwars |> count()
+```
+
+Contar el número de individuos por sexo:
+
+```{r}
+starwars |> count(sex)
+```
+
+También sirve para hacer tablas de contingencia (para varias variables).
+
+Calcula cuantos individuos hay en cada combinación de las variables sexo y género. ofrece además los resultados devolviendo los grupos ordenados en función de su frecuencia (de mayor a menor)
+
+```{r}
+starwars |> count(sex, gender, sort = TRUE)
+```
+
+Algo a tener en cuenta es que este tipo de operaciones nos da una tabla resumen (que ya no tiene nada que ver con las variables que se tenían antes). Esto no implica que no se puedan emplear las mismas funciones de antes pero ahora a esta tabla.
+
+Por ejemplo contamos el número de individuos de cada sexo y luego calculamos la frecuencia relativa y la acumulada.
+
+```{r}
+starwars |> 
+  count(sex) |> 
+  mutate(freq_rel = n/sum(n),
+         freq_cum = cumsum(freq_rel))
+```
+
+## Agrupar: group_by()
+
+Cuando apliquemos group_by() es importante entender que NO MODIFICA los datos, sino que nos crea una variable de grupo (subtablas por cada grupo) que modificará las acciones futuras: las operaciones se aplicarán a cada subtabla por separado
+
+Extraemos el personaje más alto según su peso
+
+```{r}
+starwars |>
+  group_by(sex) |> 
+  slice_max(height) |> 
+  ungroup()
+```
+
+En la nueva versión de {dplyr} ahora se permite incluir la variable de grupo en la llamada a muchas funciones con el argumento by = ... o .by = ...
+
+```{r}
+starwars |>
+  slice_max(height, by = sex) 
+```
+
+## Fila-a-fila: rowwise()
+
+Para que los calculos se hagan fila por fila.
+
+Ejemplo: tenemos un conjunto de notas y queremos calcular la media de cada inividuo (hay que tener en cuenta que este conjunto no es tidy data)
+
+```{r}
+notas <- tibble("mates" = c(7.5, 8, 9.1, 3),
+                "lengua" = c(8, 6, 6.5, 9.2))
+
+notas |> 
+  rowwise() |> 
+  mutate(media_curso = mean(c(mates, lengua)))
+```
+
+## Resumir: summarise()
+
+Summarise nos permite sacar resúmenes estadísticos. Esta función calcula un nuevo dataset de resumen, solo incluyendo aquello que esté indicado.
+
+Queremos la media y la desviación típica de los pesos
+
+```{r}
+starwars |> 
+  drop_na(mass) |> 
+  summarise(media_peso = mean(mass),
+                      sd_peso = sd(mass))
+```
+
+Summarise también nos ofrece la opción de agrupar las estadísticas por alguna variable.
+
+Calculamos el peso por sexo.
+
+```{r}
+starwars |> 
+  drop_na(mass) |> 
+  group_by(sex, gender) |> 
+  summarise(media_peso = mean(mass),
+            sd_peso = sd(mass)) |> 
+  ungroup() 
+```
+
+```{r}
+starwars |> 
+  drop_na(mass) |> 
+  summarise(media_peso = mean(mass),
+            sd_peso = sd(mass), .by = sex) 
+```
+
+Calcula los cuantiles principales del peso.
+
+Como podemos ver R nos ofrece un warning ya que está devolviendo varios valores para cada variable.
+
+```{r}
+starwars |> 
+  drop_na(mass) |> 
+  summarise(q_peso = quantile(mass)) 
+```
+
+Solución: en este caso se emplea reframe()
+
+```{r}
+starwars |> 
+  drop_na(mass) |> 
+  reframe(q_peso = quantile(mass)) 
+```
+
+Si queremos calcular algo para varias variables, tanto en mutate como en summarise existe la sentencia across(). Esta permite actuar sobre varias columnas por nombre.
+
+```{r}
+starwars |> 
+  summarise(medias = across(height:mass, mean, na.rm = TRUE), .by = sex) |> 
+  pull(medias)
+```
+
+## Tu turno 13
+
+> Calcula cuántos personajes hay de cada especie, ordenados de mayor a menor frecuencia.
+
+```{r}
+starwars |> 
+  count(species, sort = TRUE) #|> 
+  #drop_na()
+```
+
+> Tras eliminar ausentes en las variables de peso y estatura, añade una nueva variable que nos calcule el IMC de cada personaje, y determina el IMC medio de nuestros personajes desagregada por sexo
+
+```{r}
+starwars |>  
+  drop_na(mass, height) |> 
+  mutate(IMC = mass / (height/100)^2) |> 
+  summarise(IMC_medio = mean(IMC), .by = sex)
+```
+
+> Obtén el personaje más joven por cada sexo.
+
+```{r}
+starwars |> 
+  slice_min(birth_year, by = sex)
+```
+
+> Obtén la edad del personaje más joven y más viejo de cada sexo.
+
+```{r}
+starwars |> 
+  drop_na(birth_year) |> 
+  summarise(joven = min(birth_year), 
+            viejo = max(birth_year),
+            .by = sex)
+```
+
+> Determina la cantidad de personajes en cada década (echa un vistazo a round(), primero sin desagregar y luego desagregado por sexo.
+
+```{r}
+starwars |> 
+  count(decada = round(birth_year, digits = -1))
+
+starwars |> 
+  count(decada = round(birth_year, digits = -1), by = sex)
+```
+
+# Funciones
+
+Ejemplo area de un rectángulo y un cuadrado.
+
+```{r}
+area_rectangulo <- function(lado_1,lado_2){
+  return(lado_1*lado_2)
+}
+
+area <- function(lado_1, lado_2 = NULL){
+  if(is.null(lado_2)){
+    return(list(lado_1*lado_1,"Esto es un cuadrado"))
+  }else{
+    return(list(lado_1*lado_2, "Esto es un rectangulo"))
+  }
+}
+
+
+
+area <- function(lado_1, lado_2 = lado_1){
+  A <- lado_1*lado_2
+  cuadrado <- lado_1 == lado_2
+  return(list(A, cuadrado))
+}
+```
+
+## Introducción a listas
+
+Son una opción muy útil en cuanto a las posibles salidas que nos puede ofrecer una función se refiere.
+
+```{r}
+calcular_area <- function(lado_1, lado_2 = lado_1) {
+  
+  # Cuerpo de la función
+  area <- lado_1 * lado_2
+  
+  # Resultado
+  return(list("area" = area, "lado_1" = lado_1, "lado_2" = lado_2))
+  
+}
+```
+
+Para hacer las variables locales que sean globales se les pone una "doble asignación"
+
+```{r}
+n_aplicaciones <- 0
+
+calcular_area <- function(lado_1, lado_2 = lado_1) {
+  
+  # Cuerpo de la función
+  area <- lado_1 * lado_2
+  n_aplicaciones <<- n_aplicaciones + 1 
+  
+  # Resultado
+  return(list("area" = area, "lado_1" = lado_1, "lado_2" = lado_2))
+  
+}
+n_aplicaciones
+calcular_area(3)
+n_aplicaciones
+calcular_area(3,2)
+n_aplicaciones
+```
+
+Listas, para acceder a uno de los objetos de la lista se usan dos corchetes \[\[\]\] para acceder a dos solo un corchete \[\].
+
+Las listan no son vectorizables, es decir no puedes hacer un sum para los diferentes apartados de la lista.
+
+```{r}
+lista <- list("a" = 1:3, "b" = 4:7, "c"= 10:12)
+lapply(lista, FUN = "sum")
+```
+
+## Ejercicio: ejemplos listas
+
+> En cuantas peliculas aparece cada personaje de starwars
+
+```{r}
+# starwars |> select(films)  
+head(lapply(starwars$films, FUN = length), 3)
+
+starwars |> 
+  mutate(n_films = unlist(lapply(starwars$films, FUN = length)))
+
+starwars |> 
+  mutate(n_films = (sapply(starwars$films, FUN = length)))
+```
+
+> Una nueva variable lógica que me diga si el personaje sale en el imperio contraataca ("The Empire Strickes Back")
+
+```{r}
+# starwars$films
+starwars |> 
+  mutate(imperio = sapply(starwars$films, str_detect, "The Empire Strikes Back")) 
+
+starwars |> 
+  mutate(imperio = sapply(starwars$films, 
+                          function(x) {return(any(str_detect(x, "The Empire Strikes Back")))})) 
+```
+
+> Diseñar una función para detectar si un personaje aparece o no en una película
+
+```{r}
+participa_pelicula <- function(x, films = "The Empire Strikes Back"){
+  return(any(str_detect(x, films)))
+}
+
+starwars |> 
+  mutate(imperio = sapply(starwars$films, 
+                          participa_pelicula)) 
+
+starwars |> 
+  mutate(clones = sapply(starwars$films, 
+                         participa_pelicula, "Attack of the Clones")) 
+```
+
+> Define una función que dado starwars me diga si un personaje (personaje) aparece o no en una película (pelicula)
+
+```{r}
+participa_pelicula <- function(tabla, personaje, films = "The Empire Strikes Back"){
+  return(any(str_detect(personaje, films)))
+}
+```
+
+```{r}
+participa_pelicula(starwars, "Luke Skywalker")
+```
+
+Opción Javi
+
+```{r}
+detectar_peli <- function(x, films = "The Empire Strikes Back"){
+  return(any(str_detect(x, films)))
+}
+
+aparece <- function(tabla, personaje, pelicula){
+  output <-
+    tabla |> 
+    mutate(aparece = sapply(FUN = detectar_peli, films, pelicula)) |> 
+    filter(name == personaje) |> 
+    pull(aparece)
+  return(output)
+}
+aparece(starwars, "Yoda", "Revenge of the Sith")
+```
+
+## Tu turno 14: funciones
+
+> Modifica el código inferior para definir una función llamada funcion_suma, de forma que dados dos elementos, devuelve su suma.
+
+```{r}
+#| eval: false
+nombre <- function(x, y) {
+  suma <- # código a ejecutar
+  return()
+}
+# Aplicamos la función
+suma(3, 7)
+```
+
+```{r}
+suma <- function(x, y) {
+  suma <- x + y
+  return(suma)
+}
+# Aplicamos la función
+suma(3, 7)
+```
+
+> Modifica el código inferior para definir una función llamada funcion_producto, de forma que dados dos elementos, devuelve su producto, pero que por defecto calcule el cuadrado
+
+```{r}
+#| eval: false
+nombre <- function(x, y) {
+  producto <- # código de la multiplicación
+  return()
+}
+producto(3)
+producto(3, -7)
+```
+
+```{r}
+funcion_producto <- function(x, y = x) {
+  producto <- x*y# código de la multiplicación
+  return(producto)
+}
+funcion_producto(3)
+funcion_producto(3, -7)
+```
+
+> Define una función llamada igualdad_nombres que, dados dos nombres, nos diga si son iguales o no. Hazlo considerando importantes las mayúsculas, y sin que importen las mayúsculas. Echa un vistazo al paquete {stringr}.
+
+Opción 1
+
+```{r}
+igualdad_nombres <- function(nombre_1, nombre_2){
+  str_equal(nombre_1, nombre_2)
+}
+igualdad_nombres("Juan", "juan")
+igualdad_nombres("Juan", "juana")
+
+igualdad_nombres <- function(nombre_1, nombre_2){
+  str_equal(nombre_1, nombre_2, ignore_case = TRUE)
+}
+igualdad_nombres("Juan", "juan")
+igualdad_nombres("Juan", "juana")
+```
+
+Opción 2
+
+```{r}
+# Distinguiendo mayúsculas
+igualdad_nombres <- function(persona_1, persona_2) {
+  return(persona_1 == persona_2)
+}
+igualdad_nombres("Javi", "javi")
+igualdad_nombres("Javi", "Lucía")
+
+# Sin importar mayúsculas
+igualdad_nombres <- function(persona_1, persona_2) {
+  return(toupper(persona_1) == toupper(persona_2))
+}
+igualdad_nombres("Javi", "javi")
+igualdad_nombres("Javi", "Lucía")
+```
+
+> Crea una función llamada calculo_IMC que, dados dos argumentos (peso y estatura en metros) y un nombre, devuelva una lista con el IMC y el nombre.
+
+```{r}
+calculo_IMC <- function(peso, estatura_m, nombre){
+  return(list(nombre = nombre, IMC = peso/(estatura_m^2)))
+}
+calculo_IMC(60, 1.6, "María")
+```
+
+> Repite el ejercicio anterior pero con otro argumento opcional que se llame unidades (por defecto, unidades = "metros"). Desarrolla la función de forma que haga lo correcto si unidades = "metros" y si unidades = "centímetros".
+
+Opción 1
+
+```{r}
+calculo_IMC <- function(peso, estatura_m, unidades = "metros", nombre){
+  if(unidades == "centímetros"){
+    return(list(nombre = nombre, IMC = peso/((estatura_m/100)^2)))  
+  }else{
+    return(list(nombre = nombre, IMC = peso/(estatura_m^2)))
+  }
+  
+}
+calculo_IMC(60, 1.6, nombre = "María")
+calculo_IMC(60, 160, unidades = "centímetros", nombre = "María")
+```
+
+Opción 2
+
+```{r}
+#| eval: false
+calculo_IMC <- function(nombre, peso, estatura, unidades = "metros") {
+  
+  return(list("nombre" = nombre,
+              "IMC" = peso/(if_else(unidades == "metros", estatura, estatura/100)^2)))
+}
+```
+
+> Crea un tibble ficticio de 7 personas, con tres variables (inventa nombre, y simula peso, estatura en centímetros), y aplica la función definida de forma que obtengamos una cuarta columna con su IMC.
+
+```{r}
+set.seed(12345)
+tibble("nombres" = c("Alonso", "Alma"),
+       "peso" = sample(55:90, 2, replace = TRUE),
+       "altura" = sample(150:200, 2, replace = TRUE)) |> 
+  mutate("IMC" = calculo_IMC(peso, altura, "centímetros",nombres)[[2]])
+       
+```
+
+```{r}
+#| eval: false
+datos <-
+  tibble("nombres" = c("javi", "sandra", "laura",
+                       "ana", "carlos", "leo", NA),
+         "peso" = rnorm(n = 7, mean = 70, sd = 1),
+         "estatura" = rnorm(n = 7, mean = 168, sd = 5))
+
+datos |> 
+  mutate(IMC = calculo_IMC(nombres, peso, estatura, unidades = "centímetros")$IMC)
+```
+
+# ggplot2
+
+Un gráfico se podrá componer de capas
+
+-   Datos (data)
+-   Mapeado (aesthetics) de elementos estéticos: ejes, color, forma, etc (en función de los datos)
+-   Geometría (geom): puntos, líneas, barras, polígonos, etc.
+-   Componer gráficas (facet)
+-   Transformaciones (stat): ordenar, resumir, etc.
+-   Coordenadas (coord): coordenadas cartesianas, polares, grids, etc.
+-   Temas (theme): fuente, tamaño de letra, subtítulos, captions, leyenda, ejes, etc.
+
+```{r}
+#| include: false
+rm(list = ls())
+```
+
+## Ejemplo con gapminder
+
+**Estudio inicial de la base de datos**
+
+```{r}
+gapminder::gapminder
+```
+
+```{r}
+glimpse(gapminder)
+```
+
+Filtramos para trabajar solo con el año 1997 y eliminamos los ausentes en las variables para no tener problemas a la hora de graficar.
+
+```{r}
+gapminder_1997 <- gapminder::gapminder |> 
+  filter(year == 1997) |> 
+  drop_na()
+```
+
+## geom_point(): Scatter plot, gráfico de puntos/dispersión
+
+PIB per capita vs población
+
+```{r}
+gapminder_1997 |> 
+  ggplot(aes(x = gdpPercap, y = pop)) +
+  geom_point()
+```
+
+Si queremos cambiar los ejes lo podemos cambiar los ejes de dos formas distintas:
+
+```{r}
+gapminder_1997 |> 
+  ggplot(aes(y = gdpPercap, x = pop)) +
+  geom_point()
+
+gapminder_1997 |> 
+  ggplot(aes(x = gdpPercap, y = pop)) +
+  geom_point() + 
+  coord_flip()
+```
+
+PIB per capita vs esperanza de vida
+
+```{r}
+ggplot(gapminder_1997,
+       aes(y = gdpPercap, x = lifeExp)) +
+  geom_point()
+```
+
+### Parámetros geom_point()
+
+-   na.rm = ...: si queremos que nos quite ausentes.
+-   color = ...: color (si tiene dimensión, color del contorno)\*
+-   fill = ...: color del relleno.\*
+-   size = ...: tamaño de la geometría \*
+-   alpha = ...: grado de opacidad del color (1 totalmente opaco, 0 totalmente transparente)
+-   shape = ...: forma de la geometría, en este caso del «punto»\* (ver todas las opciones en vignette("ggplot2-specs"))
+-   stroke = ...: tamaño del contorno
+
+\*Pueden depender de una variable del conjunto
+
+```{r}
+ggplot(gapminder_1997,
+       aes(y = gdpPercap, x = lifeExp)) +
+  geom_point(color = "#D274A4",
+             fill = "#AD276C",
+             size = 7,
+             alpha = 0.4,
+             shape = 23)
+```
+
+### Otras opciones
+
+Gráfico que representa 4 variables a partir de los diferentes parámetros del geom_point()
+
+```{r}
+# Tamaño por población
+# Color por continentes
+ggplot(gapminder_1997,
+       aes(y = gdpPercap, x = lifeExp,
+           color = continent, size = pop)) +
+  geom_point(alpha = 0.7)
+```
+
+## Etiquetas sencillas: labs()
+
+Podemos personalizar de manera sencilla haciendo uso de la capa labs():
+
+-   title, subtitle: título/subtítulo
+-   caption: pie de gráfica
+-   x, y: nombres de los ejes
+-   size, color, fill, ...: nombre en la leyenda de las variables que codifiquen los distintos atributos
+
+```{r}
+gapminder_1997 |> 
+  ggplot(aes(y = gdpPercap, x = lifeExp, 
+             color = continent, size = pop)) +
+  geom_point(alpha = 0.7) +
+  labs(x = "Esperanza de vida", y = "Renta per cápita",
+       title = "Primer ggplot", subtitle = "Datos de gapminder",
+       caption = "A. Moreno-Ribera", color = "Continente", size = "Población")
+```
+
+## Eliminar la leyenda guides(atributo = "none")
+
+```{r}
+ggplot(gapminder_1997,
+       aes(y = gdpPercap, 
+           x = lifeExp,
+           color = continent, 
+           size = pop)) +
+  geom_point(alpha = 0.7) +
+  guides(size = "none", color = "none") +
+  labs(x = "Esperanza de vida",
+       y = "Renta per cápita",
+       title = "Primer ggplot",
+       caption = "A. Moreno-Ribera",
+       color = "continente")
+```
+
+## Escalas (scale): ejes
+
+### Ejes x e y
+
+-   scale_x_continuous(limits = c(inferior, superior), breaks = seq(from, to, by), labels = label_number(suffix = " años"))
+
+-   scale_x_discrete()
+
+-   scale_y_continuous(limits = c(inferior, superior), breaks = seq(from, to, by), labels = label_number(suffix = " años"))
+
+-   scale_y_discrete()
+
+¿Cómo etiquetar las unidades de los ejes? Haciendo uso del paquete {scales} podemos añadir prefijos/sufijos con labels = label_number(...).
+
+También se pueden utilizar etiquetas ya creadas por el paquete como (labels = scales::label_dollar()).
+
+```{r}
+ggplot(gapminder_1997,
+       aes(y = gdpPercap, x = lifeExp,
+           color = continent)) +
+  geom_point(alpha = 0.7) +
+  scale_x_continuous(breaks = seq(35, 85, by = 10)) +
+  labs(x = "Esperanza de vida", y = "Renta per cápita",
+       title = "Primer ggplot", caption = "A. Moreno-Ribera",
+       color = "continente")
+```
+
+```{r}
+#| warning: false
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, color = continent, size = pop)) +
+  geom_point(alpha = 0.7) +
+  scale_x_continuous(limits = c(50, 70), breaks = seq(50, 70, by = 5)) +
+  scale_y_continuous(limits = c(1000, 18000), breaks = seq(0, 18000, by = 1000)) +
+  ggthemes::scale_color_colorblind() +
+  guides(size = "none") +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+```{r}
+#| warning: false
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, color = continent, size = pop)) +
+  geom_point(alpha = 0.7) +
+  scale_x_continuous(limits = c(50, 70), breaks = seq(50, 70, by = 5),
+                     labels = label_number(suffix = " años")) +
+  scale_y_continuous(limits = c(1000, 18000), breaks = seq(0, 18000, by = 1000),
+                     labels = label_number(suffix = " $")) +
+  ggthemes::scale_color_colorblind() +
+  guides(size = "none") +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+### Escala de colores
+
+**Manualmente**
+
+```{r}
+pal <- c("#A02B85", "#2DE86B", "#4FB2CA", "#E8DA2D", "#E84C2D")
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, color = continent)) +
+  geom_point(alpha = 0.7) +
+  scale_x_continuous(breaks = seq(35, 85, by = 10)) +
+  scale_color_manual(values = pal) +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "A. Moreno-Ribera", color = "continente")
+```
+
+**Paquete ggthemes**
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, color = continent, size = pop)) +
+  geom_point(alpha = 0.7) +
+  scale_x_continuous(breaks = seq(35, 85, by = 10)) +
+  ggthemes::scale_color_economist() +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "A. Moreno-Ribera", color = "continente")
+```
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, color = continent, size = pop)) +
+  geom_point(alpha = 0.7) +
+  scale_x_continuous(breaks = seq(35, 85, by = 10)) +
+  ggthemes::scale_color_colorblind() +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "A. Moreno-Ribera", color = "continente")
+```
+
+**Paquete Harry Potter**
+
+https://github.com/aljrico/harrypotter
+
+```{r}
+# devtools::install_github(repo = "aljrico/harrypotter") 
+# install.packages("harrypotter")
+# library(harrypotter)
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, color = continent, size = pop)) +
+  geom_point(alpha = 0.7) +
+  scale_x_continuous(breaks = seq(35, 85, by = 10)) +
+  harrypotter::scale_color_hp_d(option = "ravenclaw")+
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "A. Moreno-Ribera", color = "continente")
+```
+
+**Paquete cuadros**
+
+https://github.com/BlakeRMills/MetBrewer
+
+```{r}
+#devtools::install_github(repo = "BlakeRMills/MetBrewer") 
+# install.packages("MetBrewer")
+#library(MetBrewer)
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, color = continent, size = pop)) +
+  geom_point(alpha = 0.7) +
+  scale_x_continuous(breaks = seq(35, 85, by = 10)) +
+  scale_color_manual(values = MetBrewer::met.brewer("Monet")) +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "A. Moreno-Ribera", color = "continente")
+```
+
+**Paquete reguetón**
+
+https://github.com/jbgb13/peRReo
+
+```{r}
+# devtools::install_github(repo = "jbgb13/peRReo") 
+# library(peRReo)
+
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, color = continent, size = pop)) +
+  geom_point(alpha = 0.7) +
+  scale_x_continuous(breaks = seq(35, 85, by = 10)) +
+  scale_color_manual(values = peRReo::latin_palette("rosalia")) +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "A. Moreno-Ribera", color = "continente")
+```
+
+**Paleta Brewer: escalas continuas de colores**
+
+Información de las paletas
+
+```{r}
+RColorBrewer::brewer.pal.info
+RColorBrewer::brewer.pal(n = 5, name = "RdYlBu")
+RColorBrewer::display.brewer.pal(n = 5, name = "RdYlBu")
+```
+
+Para incluirlo podemos usar scale_colour_brewer() o bien scale_color_distiller() si queremos crear una escala continua (interpolando entre los colores).
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = pop, color = lifeExp)) +
+  geom_point(alpha = 0.7, size = 3) +
+  scale_x_log10() +
+  
+  scale_color_distiller(palette = "RdYlBu") +
+  
+  guides(size = "none") +
+  labs(x = "Población", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "esperanza de vida") +
+  theme_minimal()
+```
+
+Tambien podemos crear un gradiente de color manual son scale\_...*gradient() para dos colores, scale*...*gradient2() para tres colores (bajo, medio y alto) y scale*...\_gradientn() para n colores
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = pop, color = lifeExp)) +
+  geom_point(alpha = 0.8, size = 3) +
+  scale_x_log10() +
+  scale_color_gradient2(low = "#E92745", mid = "#F4ED5B", high = "#56B1F7", midpoint = 60) +
+  labs(x = "Población", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "esperanza de vida") +
+  theme_minimal()
+```
+
+### Escala de tamaños
+
+scale_size_continuous()
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, color = continent, size = pop)) +
+  geom_point(alpha = 0.7) +
+  scale_x_continuous(breaks = seq(35, 85, by = 10)) +
+  ggthemes::scale_color_colorblind() +
+  scale_size_continuous(range = c(3, 15)) +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "A. Moreno-Ribera", color = "continente")
+```
+
+### Otras escalas: scale\_...\_...()
+
+¿Cómo cambiar los ajustes de tamaño, alpha, etc? Igual que tenemos scale_x\_...() o scale_color\_...(), tenemos también scale_size\_...() y scale_alpha\_...()
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, color = continent, size = pop)) +
+  geom_point(aes(alpha = pop)) +
+  scale_size(range = c(4, 12)) +
+  scale_alpha(range = c(0.1, 0.5)) +
+  ggthemes::scale_color_colorblind() +
+  guides(size = "none", alpha = "none") +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+## Relación entre ejes
+
+-   scale_x_sqrt()
+-   scale_x_log10()
+-   scale_y_log10()
+
+```{r}
+gapminder |> 
+  ggplot(aes(x = lifeExp, y = gdpPercap)) +
+  geom_point(aes(color = continent, size = pop), 
+             alpha = 0.7) +
+  stat_smooth(method = "lm", color = "black") +
+  scale_y_log10() + 
+  ggthemes::scale_color_colorblind() + 
+  guides(size = "none", color = "none") +
+  labs(x = "Esperanza de vida",
+       y = "Renta per cápita",
+       size = "Población",
+       color = "Continente",
+       title = "Primer ggplot2",
+       subtitle = "Hola que tal?",
+       caption = "Autor: Pepito. Fuente: la Cibeles") + 
+  theme_minimal(base_size = 10)
+```
+
+```{r}
+gapminder |> 
+  ggplot(aes(x = lifeExp, y = gdpPercap)) +
+  geom_point(aes(color = continent, size = pop), 
+             alpha = 0.7) +
+  stat_smooth(method = "lm", color = "black") +
+  scale_y_log10(n.breaks = 10) + 
+  #scale_y_continuous(n.breaks = 10) + 
+  ggthemes::scale_color_colorblind() + 
+  guides(size = "none", color = "none") +
+  labs(x = "Esperanza de vida",
+       y = "Renta per cápita",
+       size = "Población",
+       color = "Continente",
+       title = "Primer ggplot2",
+       subtitle = "Hola que tal?",
+       caption = "Autor: Pepito. Fuente: la Cibeles") + 
+  theme_minimal(base_size = 10)
+```
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, color = continent, size = pop)) +
+  geom_point(alpha = 0.7) +
+  scale_y_log10() +
+  ggthemes::scale_color_colorblind() +
+  guides(size = "none") +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+## Capa de coordenadas
+
+Además de escalas tenemos una capa de coordenadas con coord\_... para indicar si queremos un sistema cartesiano (y sus límites), - coordenadas polares (coord_polar()), - si queremos coordenadas iguales (coord_equal()) o - invertir su rol (coord_flip())
+
+## Capa de stats
+
+### stat_smooth(): linear trend
+
+Visualiza un ajuste suavizado de los datos (reg. lineal, glm, loess, gam, ajuste polinómico dándole expresión en formula = ...)
+
+Con stat_smooth(method = "lm", se = FALSE) una recta de regresión (sin intervalos).
+
+Sin method especificado ajuste por un LOESS (menos de 1000 puntos) o GAM (más de 1000 puntos)
+
+```{r}
+gapminder |> 
+  ggplot(aes(x = lifeExp, y = gdpPercap)) +
+  geom_point(aes(color = continent, size = pop), 
+             alpha = 0.7) +
+  stat_smooth(method = "lm", color = "black") +
+  ggthemes::scale_color_colorblind() + 
+  guides(size = "none", color = "none") +
+  labs(x = "Esperanza de vida",
+       y = "Renta per cápita",
+       size = "Población",
+       color = "Continente",
+       title = "Primer ggplot2",
+       subtitle = "Hola que tal?",
+       caption = "Autor: Pepito. Fuente: la Cibeles") + 
+  theme_minimal(base_size = 10)
+```
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp)) +
+  geom_point(aes(color = continent, size = pop), alpha = 0.8) +
+  
+  stat_smooth(method = "lm", se = FALSE, linewidth = 1.5) +
+  
+  scale_y_log10() +
+  guides(size = "none") +
+  ggthemes::scale_color_colorblind() +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+Heredando todos los parámetros en todas las capas:
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, color = continent, size = pop)) +
+  geom_point(alpha = 0.8) +
+  stat_smooth(method = "lm", se = FALSE, linewidth = 1.5) +
+  scale_y_log10() +
+  guides(size = "none") +
+  ggthemes::scale_color_colorblind() +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp)) +
+  geom_point(aes(color = continent, size = pop), alpha = 0.8) +
+  stat_smooth(method = "lm", formula = y ~ x + I(x^2) + I(x^3) + I(x^4) + I(x^5),
+              color = "firebrick", se = FALSE, linewidth = 1.2) +
+  guides(size = "none") +
+  ggthemes::scale_color_colorblind() +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp)) +
+  geom_point(aes(color = continent, size = pop), alpha = 0.8) +
+  stat_smooth(color = "firebrick", se = FALSE, linewidth = 1.2) +
+  guides(size = "none") +
+  ggthemes::scale_color_colorblind() +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+### stat_summary(): estadísticas por grupos
+
+Con stat_summary() podemos incluso añadir estadísticas por grupos, como la media o mediana.
+
+Fíjate que si no tenemos una variable cuali, la media la hace con n = 1 (es decir, es el propio punto).
+
+```{r}
+ggplot(gapminder, aes(y = gdpPercap, x = year)) +
+  geom_point(size = 1.7, alpha = 0.2) +
+  
+  stat_summary(fun = "mean", size = 0.4, color = "coral") + 
+  stat_summary(fun = "median", size = 0.4, color = "darkcyan") +
+  
+  ggthemes::scale_color_colorblind() +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+## geom_text()
+
+Podemos añadirle textos simples con geom_text(label = ...), por ejemplo, para añadir la correlación del ajuste.
+
+```{r}
+cor <- round(cor(gapminder_1997$gdpPercap, gapminder_1997$lifeExp), 3)
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp)) +
+  geom_point(aes(color = continent, size = pop), alpha = 0.8) +
+  stat_smooth(method = "lm", se = FALSE) +
+  
+  geom_text(aes(x = 50, y = 20000, 
+                label = glue("Correlación: {cor}")),
+                size = 5, color = "darkcyan") +
+  
+  scale_y_log10() +
+  guides(size = "none") +
+  ggthemes::scale_color_colorblind() +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+## facet_wrap()
+
+También podemos desagregar los gráficos (facetar) por grupos, equivalente al group_by() en tidyverse.
+
+Por ejemplo, vamos a crear un gráfico por continente, mostrando todos los gráficos a la vez (pero por separado) con facet_wrap(\~continent).
+
+Por defecto las escalas en los ejes son compartidas. Si queremos que la escala de los ejes vaya por libre debemos usar scales = "free_x", scales = "free_y" o scales = "free"
+
+Con nrow = ... y ncol = ... podemos especificar cuantas columnas y filas tenemos en la cuadrícula de gráficas
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, size = pop, color = continent)) +
+  geom_point(alpha = 0.75) +
+  ggthemes::scale_color_colorblind() +
+  
+  facet_wrap(~continent) +
+  
+  guides(color = "none") +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+```{r}
+#| include: false
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, size = pop, color = continent)) +
+  geom_point(alpha = 0.75) +
+  ggthemes::scale_color_colorblind() +
+  
+  facet_wrap(~continent, scales = "free") +
+  
+  guides(size = "none") +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, size = pop, color = continent)) +
+  geom_point(alpha = 0.75) +
+  ggthemes::scale_color_colorblind() +
+  facet_wrap(~continent, scales = "free", nrow = 1) +
+  guides(size = "none", color = "none") +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+## facet_grid()
+
+También le podemos pasar dos argumentos (variables) para formar un grid de gráficas
+
+```{r}
+ggplot(gapminder |> filter(year >= 1962), aes(y = gdpPercap, x = lifeExp, size = pop, color = continent)) +
+  geom_point(alpha = 0.7) +
+  ggthemes::scale_color_colorblind() +
+  facet_grid(continent ~ year, scales = "free") +
+  guides(size = "none") +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal()
+```
+
+## Tema: theme()
+
+**Minimalista**
+
+```{r}
+ggplot(gapminder_1997, aes(y = gdpPercap, x = lifeExp, color = continent, size = pop)) +
+  geom_point(alpha = 0.7) +
+  scale_x_continuous(breaks = seq(35, 85, by = 10)) +
+  ggthemes::scale_color_colorblind() +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "A. Moreno-Ribera", color = "continente") +
+  theme_minimal()
+```
+
+**Posición de la leyenda**
+
+Aprenderemos distintas personalizaciones del tema pero con theme(legend.position = ...) podemos decidir la posición de la leyenda
+
+```{r}
+ggplot(gapminder |> filter(year >= 1962), aes(y = gdpPercap, x = lifeExp, size = pop, color = continent)) +
+  geom_point(alpha = 0.7) +
+  ggthemes::scale_color_colorblind() +
+  facet_grid(continent ~ year, scales = "free") +
+  guides(size = "none") +
+  labs(x = "Esperanza de vida", y = "Renta per cápita", title = "Primer ggplot",
+       caption = "J. Álvarez Liébana", color = "continente") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+**Más personalización**
+
+Vamos a hacer un paréntesis y aprender a personalizar más nuestras gráficas
+
+theme_set(theme_minimal()) fija tema base
+
+theme_update(...) personaliza parámetros.
+
+Por ejemplo, en plot.title vamos a indicarle el tamaño y negrita en el título, dentro de element_text()
+
+Podemos hacer lo mismo con otros textos con plot.subtitle o plot.caption
+
+```{r}
+theme_set(theme_minimal())
+theme_update(
+  plot.title =
+    element_text(size = 25, face = "bold"),
+  plot.subtitle = element_text(size = 13),
+  plot.caption = element_text(size = 9))
+
+starwars |> 
+  drop_na(sex) |> 
+  ggplot(aes(x = sex)) +
+  geom_bar(aes(fill = sex), alpha = 0.5) + 
+  scale_fill_colorblind() +
+  coord_flip() +
+  labs(x = "sexo", y = "frecuencia absoluta", fill = "sexo", title = "Primer diagrama de barras",
+       subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente", caption = "J. Álvarez Liébana")
+```
+
+### Tipo de letra
+
+https://fonts.google.com/
+
+Vamos incluso a elegir fuente o el color
+
+sysfonts::font_add_google(): le indicaremos la tipografía de https://fonts.google.com/
+
+showtext_auto() del paquete {showtext} nos permite su uso.
+
+Configuración:
+
+```{r}
+library(showtext)
+library(sysfonts)
+font_add_google(name = "Lora")
+showtext_auto()
+theme_set(theme_minimal(base_family = "Lora")) 
+
+# Configurar tema
+theme_update(
+  plot.title = element_text(color = "#C34539", face = "bold", size = 33),
+  plot.subtitle = element_text(color = "#3E6FCB", face = "bold", size = 21),
+  axis.title.x = element_text(size = 19),
+  axis.title.y = element_text(size = 19))
+```
+
+Ejemplo:
+
+```{r}
+starwars |> 
+  drop_na(sex) |> 
+  mutate(Human = species == "Human") |> 
+  ggplot(aes(x = Human)) +
+  geom_bar(aes(fill = sex), alpha = 0.5) + 
+  scale_fill_colorblind() +
+  labs(x = "¿Humanos?", y = "frecuencia absoluta", fill = "sexo", title = "Primer diagrama de barras",
+       subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente",
+       caption = "J. Álvarez Liébana")
+```
+
+### Más personalización
+
+```{r}
+netflix <-
+  read_csv('https://raw.githubusercontent.com/elartedeldato/datasets/main/netflix_titles.csv')
+
+netflix_gg <-
+  netflix |> 
+  filter(str_detect(str_to_lower(title), "high school") |
+         str_detect(str_to_lower(description), "high school")) |> 
+  mutate(year_added = factor(year(mdy(date_added)), 
+                             levels = 2011:2021, 
+                             ordered = TRUE), .after = date_added) |>
+  drop_na(year_added) |> 
+  filter(type == "TV Show") |> 
+  pull(year_added) |> 
+  fct_count()
+
+
+ggplot(data = netflix_gg, 
+       aes(x = f, y = n)) +
+  geom_col(fill = "#E50914") +
+  labs(title = "NETFLIX", 
+       subtitle = "Series de instituto",
+       x = "Año de estreno",
+       y = "Cantidad") +
+  annotate(geom = "text", x = "2021", y = 5.5, 
+           label = "(hasta enero)", 
+           family = "Permanent Marker",
+           color = "white") + 
+  annotate(geom = "segment", x = "2021", y = 5, 
+           xend = "2021", yend = 2.5, 
+           color = "white", size = 1, 
+           arrow = arrow()) +
+  theme_minimal() +
+  theme(plot.title = element_text(family = "Bebas Neue", 
+                                  size = 35, 
+                                  face = "bold", 
+                                  color = "#E50914"),
+        plot.subtitle = element_text(family = "Permanent Marker",
+                                     color = "white"),
+        axis.text = element_text(family = "Permanent Marker",
+                                color = "white"),
+        axis.title = element_blank(),
+        # axis.title = element_text(family = "Permanent Marker",
+        #                          color = "white"),
+        plot.background = element_rect(fill = "black"),
+        panel.background = element_rect(fill = "black"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(linewidth = 0.1),
+        panel.grid.major.x = element_blank())
+```
+
+## Otros gráficos
+
+### geom_bar(): gráfico de barras
+
+#### Verticales
+
+```{r}
+starwars |> 
+  drop_na(sex) |> 
+  
+  ggplot(aes(x = sex)) +
+  geom_bar(aes(fill = sex), alpha = 0.5) + 
+  
+  scale_fill_colorblind() +
+  scale_y_continuous(breaks = seq(0, 70, by = 10)) +
+  labs(x = "sexo", y = "frecuencia absoluta", fill = "sexo", title = "Primer diagrama de barras",
+       subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente",
+       caption = "J. Álvarez Liébana") +
+  theme_minimal()
+```
+
+#### Horizontales
+
+```{r}
+starwars |> 
+  drop_na(sex) |> 
+  ggplot(aes(x = sex)) +
+  geom_bar(aes(fill = sex), alpha = 0.5) + 
+  scale_fill_colorblind() +
+  scale_y_continuous(breaks = seq(0, 70, by = 10)) +
+  coord_flip() +
+  labs(x = "sexo", y = "frecuencia absoluta", fill = "sexo", title = "Primer diagrama de barras",
+       subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente",
+       caption = "J. Álvarez Liébana") +
+  theme_minimal()
+```
+
+#### Apiladas
+
+¿Podríamos visualizar dos variables discretas/cualis a la vez?
+
+Podemos incluir una en x = ... y otra en fill = ..., de manera que por defecto nos visualiza barras apiladas, por ejemplo, para ver el reparto de sexos entre humanos y no humanos.
+
+```{r}
+starwars |> 
+  drop_na(sex) |> 
+  mutate(Human = species == "Human") |> 
+  ggplot(aes(x = Human)) +
+  geom_bar(aes(fill = sex), alpha = 0.5) + 
+  scale_fill_colorblind() +
+  labs(x = "¿Humanos?", y = "frecuencia absoluta", fill = "sexo", title = "Primer diagrama de barras",
+       subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente",
+       caption = "J. Álvarez Liébana")
+```
+
+#### Solapadas
+
+Con position = "dodge" visualizamos las barras sin apilar, solapadas una al lado de otra
+
+```{r}
+starwars |> 
+  drop_na(sex) |> 
+  mutate(Human = species == "Human") |> 
+  ggplot(aes(x = Human)) +
+  geom_bar(aes(fill = sex), alpha = 0.5, position = "dodge") + 
+  scale_fill_colorblind() +
+  # guides(x = "none") + 
+  labs(x = "¿Humanos?", y = "frecuencia absoluta", fill = "sexo", title = "Primer diagrama de barras",
+       subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente",
+       caption = "J. Álvarez Liébana")
+```
+
+#### Como frecuencia relativa
+
+Con position = "fill" visualizamos las barras en forma de frecuencia relativa, con las barras de la misma altura para facilitar la comparativa.
+
+```{r}
+starwars |> 
+  drop_na(sex) |> 
+  mutate(Human = species == "Human") |> 
+  ggplot(aes(x = Human)) +
+  geom_bar(aes(fill = sex), alpha = 0.5,  position = "fill") + 
+  scale_fill_colorblind() +
+  labs(x = "¿Humanos?", y = "frecuencia relativa", fill = "sexo", title = "Primer diagrama de barras",
+       subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente",
+       caption = "J. Álvarez Liébana")
+```
+
+#### Con orden personalizado
+
+**Orden indicado**
+
+```{r}
+starwars |> 
+  drop_na(sex) |>
+  
+  mutate(sex = factor(sex, levels = c("female", "male", "hermaphroditic", "none"))) |> 
+  
+    ggplot(aes(x = sex)) +
+    geom_bar(aes(fill = sex), alpha = 0.5) + 
+    scale_fill_colorblind() +
+    labs(x = "Sexo", y = "frecuencia absoluta", fill = "sexo", title = "Primer diagrama de barras",
+         subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente",
+         caption = "J. Álvarez Liébana")
+```
+
+**Por frecuencia de mayor a menor**
+
+```{r}
+starwars |> 
+    drop_na(sex) |>
+  mutate(sex = factor(sex, levels = c("female", "male", "hermaphroditic", "none"))) |> 
+    ggplot(aes(x = fct_infreq(sex))) +
+    geom_bar(aes(fill = sex), alpha = 0.5) + 
+    scale_fill_colorblind() +
+    labs(x = "Sexo", y = "frecuencia absoluta", fill = "sexo", title = "Primer diagrama de barras",
+         subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente",
+         caption = "J. Álvarez Liébana")
+```
+
+**Por frecuencia de menor a mayor**
+
+```{r}
+starwars |> 
+    drop_na(sex) |>
+  mutate(sex = factor(sex, levels = c("female", "male", "hermaphroditic", "none"))) |> 
+    ggplot(aes(x = fct_rev(fct_infreq(sex)))) +
+    geom_bar(aes(fill = sex), alpha = 0.5) + 
+    scale_fill_colorblind() +
+    labs(x = "Sexo", y = "frecuencia absoluta", fill = "sexo", title = "Primer diagrama de barras",
+         subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente",
+         caption = "J. Álvarez Liébana")
+```
+
+### geom_col()
+
+La capa geom_bar() está solo pensada para conteos de variables discretas o cualitativas. ¿Y si queremos visualizar en el peso por sexo?
+
+Usaremos geom_col() (ahora si necesitamos x,y)
+
+Por defecto lo que hace es **sumar** la variable continua.
+
+```{r}
+starwars |> 
+  drop_na(mass, sex) |>
+  ggplot(aes(x = sex, y = mass)) +
+  geom_col(aes(fill = sex), alpha = 0.5) + 
+  scale_fill_colorblind() +
+  labs(x = "Sexo", y = "Peso", fill = "sexo", title = "Primer diagrama de columnas",
+       subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente", caption = "J. Álvarez Liébana")
+```
+
+**Media por grupos**
+
+Opción 1: haciendo resumen previamente
+
+```{r}
+starwars |> 
+  drop_na(mass, sex) |> 
+  summarise(mean_mass = mean(mass), .by = sex) |> 
+  ggplot(aes(x = sex, y = mean_mass)) +
+  geom_col(aes(fill = sex), alpha = 0.5) + 
+  scale_fill_colorblind() +
+  labs(x = "Sexo", y = "Peso (medio)", fill = "sexo", title = "Primer diagrama de columnas",
+       subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente", caption = "J. Álvarez Liébana")
+```
+
+Opción 2: stat_summary()
+
+```{r}
+starwars |> 
+    drop_na(mass, sex) |>
+  mutate(sex = factor(sex, levels = c("female", "male", "hermaphroditic", "none"))) |>
+    ggplot(aes(x = sex, y = mass, fill = sex)) +
+    stat_summary(geom = "col", fun = mean, alpha = 0.5) + # fun = mean se puede cambiar por otro estadístico como la mediana (median)
+    scale_fill_colorblind() +
+    labs(x = "Sexo", y = "Peso (medio)", fill = "sexo",
+         title = "Primer diagrama de columnas",
+         subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente",
+         caption = "J. Álvarez Liébana")
+```
+
+Opción 3: geom_bar(), indicándole stat = "summary", fun = "mean"; por defecto stat = "count"
+
+```{r}
+starwars |> 
+    drop_na(mass, sex) |>
+  mutate(sex = factor(sex, levels = c("female", "male", "hermaphroditic", "none"))) |>
+  
+    ggplot(aes(x = sex, y = mass)) +
+  
+    geom_bar(aes(fill = sex), alpha = 0.5,
+             stat = "summary", fun = "mean") + 
+  
+    scale_fill_colorblind() +
+    labs(x = "Sexo", y = "Peso (media)", fill = "sexo",
+         title = "Primer diagrama de columnas",
+         subtitle = "Sexos: femenino, masculino, hemafrodita, ninguno y ausente",
+         caption = "J. Álvarez Liébana")
+```
+
+## Continua vs discreta
+
+```{r}
+datos <-
+  read_csv("https://raw.githubusercontent.com/zonination/perceptions/master/probly.csv")
+datos_tidy <-
+  datos |> 
+  pivot_longer(cols = everything(),
+               names_to = "termino", values_to = "prob")
+datos_tidy
+datos_tidy <-
+  datos |> 
+  pivot_longer(cols = everything(),
+               names_to = "termino", values_to = "prob")
+datos_tidy
+```
+
+**Colores con gradiente**
+
+```{r}
+#| eval: false
+ggplot(resumen |> mutate(termino = fct_reorder(termino, mean_prob)),
+       aes(x = termino, y = mean_prob, fill = mean_prob)) +
+  geom_col(alpha = 0.8) +
+  scale_fill_gradient2(low = "#DA4A4A", 
+                       mid = "#FEFADF", 
+                       high = "#144F8D", 
+                       midpoint = 50) +
+  scale_y_continuous(labels = scales::label_number(suffix = "%")) +
+  labs(fill = "Prob. media", 
+       x = "Términos", 
+       y = "Probabilidad media",
+       title = "Percepción de la probabilidad") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 6, angle = 30))
+```
+
+### geom_histogram()
+
+```{r}
+datos_tidy <-
+  datos_tidy |> 
+  filter(!(termino %in% c("Chances Are Slight", "Improbable", "Probably Not", "Probable", "Likely", "Very Good Chance")))
+
+ggplot(datos_tidy |> 
+       mutate(termino = fct_reorder(termino, prob, .fun = mean)), 
+       aes(x = prob, fill = termino)) +
+  geom_histogram(bins = 12, alpha = 0.8) +
+  scale_fill_brewer(palette = "RdBu") +
+  facet_wrap(~termino, scale = "free_y", ncol = 4) +
+  labs(x = "Probabilidad", y = "Frecuencia",
+       title = "Percepción de la probabilidad") +
+  theme_minimal()
+```
+
+### geom_density()
+
+```{r}
+ggplot(datos_tidy |> 
+       mutate(termino = fct_reorder(termino, prob, .fun = mean)), aes(x = prob, fill = termino)) +
+  geom_density(alpha = 0.8) +
+  scale_fill_brewer(palette = "RdBu") +
+  facet_wrap(~termino, scale = "free_y", ncol = 4) +
+  labs(x = "Probabilidad", y = "Frecuencia relativa",
+       title = "Percepción de la probabilidad") +
+  theme_minimal()
+```
+
+**Superponiendo**
+
+```{r}
+library(ggridges)
+ggplot(datos_tidy |> 
+       mutate(termino = fct_reorder(termino, prob, .fun = mean)),
+       aes(x = prob, y = termino, fill = termino, color = termino)) +
+  geom_density_ridges(alpha = 0.7) +
+  scale_fill_brewer(palette = "RdBu") +
+  scale_color_brewer(palette = "RdBu") +
+  guides(color = "none") +
+  labs(x = "Probabilidad", y = "Términos",
+       title = "Percepción de la probabilidad") +
+  theme_minimal()
+```
+
+### geom_boxplot()
+
+outlier.atributo para modificar cosas de los outliers
+
+```{r}
+ggplot(datos_tidy |> 
+       mutate(termino = fct_reorder(termino, prob, .fun = mean)),
+       aes(x = termino, y = prob, fill = termino, color = termino)) +
+  geom_boxplot(alpha = 0.8) +
+  scale_fill_brewer(palette = "RdBu") +
+  scale_color_brewer(palette = "RdBu") +
+  guides(color = "none") +
+  labs(x = "Términos", y = "Probabilidad",
+       title = "Percepción de la probabilidad") +
+  theme_minimal()
+```
+
+### geom_jitter()
+
+```{r}
+ggplot(datos_tidy |> 
+       mutate(termino = fct_reorder(termino, prob, .fun = mean)),
+       aes(x = termino, y = prob, fill = termino, color = termino)) +
+  geom_boxplot(alpha = 0.8) +
+  geom_jitter(alpha = 0.3, size = 2) +
+  scale_fill_brewer(palette = "RdBu") +
+  scale_color_brewer(palette = "RdBu") +
+  guides(color = "none") +
+  labs(x = "Términos", y = "Probabilidad",
+       title = "Percepción de la probabilidad") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(datos_tidy |> 
+       mutate(termino = fct_reorder(termino, prob, .fun = mean)),
+       aes(x = termino, y = prob, fill = termino, color = termino)) +
+  geom_boxplot(alpha = 0.8, outlier.shape = 23, outlier.alpha = 0.9) +
+  geom_jitter(alpha = 0.3, size = 2) +
+  scale_fill_brewer(palette = "RdBu") +
+  scale_color_brewer(palette = "RdBu") +
+  guides(color = "none") +
+  labs(x = "Términos", y = "Probabilidad",
+       title = "Percepción de la probabilidad") +
+  theme_minimal()
+```
+
+### geom_quasirandom()
+
+```{r}
+library(ggbeeswarm)
+ggplot(datos_tidy |> 
+       mutate(termino = fct_reorder(termino, prob, .fun = mean)),
+       aes(x = termino, y = prob, fill = termino, color = termino)) +
+  geom_boxplot(alpha = 0.8, outlier.alpha = 0) +
+  geom_quasirandom(size = 2, alpha = 0.4,  width = 0.7) +
+  scale_fill_brewer(palette = "RdBu") +
+  scale_color_brewer(palette = "RdBu") +
+  guides(color = "none") +
+  labs(x = "Términos", y = "Probabilidad",
+       title = "Percepción de la probabilidad") +
+  theme_minimal()
+```
+
+### geom_violin()
+
+Con el argumento scale = "count" las àreas son proporcionales al número de observaciones en cada violín (por defecto scale = "area", todos la misma área). Con bw = ... modulamos la suavidad del kernel usado (bandwidth).
+
+```{r}
+ggplot(datos_tidy |> 
+       mutate(termino = fct_reorder(termino, prob, .fun = mean)),
+       aes(x = termino, y = prob, fill = termino, color = termino)) +
+  geom_violin(alpha = 0.8) +
+  scale_fill_brewer(palette = "RdBu") +
+  scale_color_brewer(palette = "RdBu") +
+  guides(color = "none") +
+  labs(x = "Términos", y = "Probabilidad",
+       title = "Percepción de la probabilidad") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(datos_tidy |> 
+       mutate(termino = fct_reorder(termino, prob, .fun = mean)),
+       aes(x = termino, y = prob, fill = termino, color = termino)) +
+  geom_violin(alpha = 0.8, scale = "count", bw = 1.5) +
+  scale_fill_brewer(palette = "RdBu") +
+  scale_color_brewer(palette = "RdBu") +
+  guides(color = "none") +
+  labs(x = "Términos", y = "Probabilidad",
+       title = "Percepción de la probabilidad") +
+  theme_minimal()
+```
+
+## Continua vs continua
+
+### geom_line()
+
+Para gráficos de evolución
+
+```{r}
+ggplot(gapminder |> 
+         summarise(mean_gdp = mean(gdpPercap), 
+                   .by = c(continent, year)), 
+       aes(x = year, y = mean_gdp, color = continent)) +
+  geom_line(alpha = 0.8, linewidth = 2) +
+  scale_y_continuous(labels = scales::label_dollar()) +
+  scale_color_colorblind() +
+  labs(x = "Año", y = "Renta per cápita media",
+       title = "Evolución en gapminder") +
+  theme_minimal()
+```
+
+### geom_step()
+
+Gráfico de escalera
+
+```{r}
+ggplot(gapminder |> 
+         summarise(mean_gdp = mean(gdpPercap), 
+                   .by = c(continent, year)), 
+       aes(x = year, y = mean_gdp, color = continent)) +
+  geom_step(alpha = 0.8, linewidth = 1.2) +
+  scale_y_continuous(labels = scales::label_dollar()) +
+  scale_color_colorblind() +
+  labs(x = "Año", y = "Renta per cápita media",
+       title = "Evolución en gapminder") +
+  theme_minimal()
+```
+
+### Series temporales: geom_line()
+
+La diferencia con otros tipos de gráficos geom_line es la capa de escalas en la que se le indica que estamos ante una fecha y de cuanto en cuanto son los salos de la fecha, por ejemplo: scale_x_date(date_breaks = "4 months")
+
+```{r}
+data <- read_table(file = "https://raw.githubusercontent.com/holtzy/data_to_viz/master/Example_dataset/3_TwoNumOrdered.csv")
+data
+```
+
+```{r}
+ggplot(data, aes(x = date, y = value)) +
+  geom_line(alpha = 0.8, color = "#145412", linewidth = 1.2) +
+  scale_x_date(date_breaks = "4 months") +
+  scale_y_continuous(labels = scales::label_dollar()) +
+  scale_color_colorblind() +
+  labs(x = "Fecha", y = "Precio del bitcoin",
+       title = "Evolución del precio del bitcoin") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30))
+```
+
+### geom_area()
+
+Gráficos de área
+
+```{r}
+ggplot(data, aes(x = date, y = value)) +
+  geom_line(color = "#145412", linewidth = 1) +
+  geom_area(alpha = 0.4, fill = "#145412") +
+  scale_x_date(date_breaks = "4 months") +
+  scale_y_continuous(labels = scales::label_dollar()) +
+  labs(x = "Fecha", y = "Precio del bitcoin",
+       title = "Evolución del precio del bitcoin") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30))
+```
+
+### Áreas apiladas
+
+aes(fill = ) + geom_area()
+
+```{r}
+ggplot(gapminder |> 
+         summarise(mean_gdp = mean(gdpPercap), 
+                   .by = c(continent, year)), 
+       aes(x = year, y = mean_gdp, fill = continent)) +
+  geom_area(alpha = 0.7) +
+  scale_y_continuous(labels = scales::label_dollar()) +
+  scale_fill_colorblind() +
+  labs(x = "Año", y = "Renta per cápita media",
+       title = "Evolución de gapminder") +
+  theme_minimal()
+```
+
+Áreas apiladas en relativo
+
+```{r}
+ggplot(gapminder |> 
+         summarise(mean_gdp = mean(gdpPercap), 
+                   .by = c(continent, year)) |> 
+         mutate(porc = 100 * mean_gdp/sum(mean_gdp), 
+                .by = year),
+       aes(x = year, y = porc, fill = continent)) +
+  geom_area(alpha = 0.7) +
+  scale_y_continuous(labels = scales::label_number(suffix = "%")) +
+  scale_fill_colorblind() +
+  labs(x = "Año", y = "Renta per cápita mundial",
+       title = "Evolución de gapminder") +
+  theme_minimal()
+```
+
+### geom_stream()
+
+Streamcharts: Modo espejo
+
+```{r}
+ggplot(gapminder |> 
+         summarise(mean_gdp = mean(gdpPercap), 
+                   .by = c(continent, year)),  
+       aes(x = year, y = mean_gdp, fill = continent)) +
+  ggstream::geom_stream(alpha = 0.7) +
+  scale_y_continuous(labels = scales::label_dollar()) +
+  scale_fill_colorblind() +
+  labs(x = "Año", y = "Renta per cápita mundial",
+       title = "Evolución de gapminder") +
+  theme_minimal()
+```
+
+Streamcharts: Sin modo espejo (type = "ridge")
+
+```{r}
+ggplot(gapminder |> 
+         summarise(mean_gdp = mean(gdpPercap), 
+                   .by = c(continent, year)),  
+       aes(x = year, y = mean_gdp, 
+           fill = continent, color = continent)) +
+  ggstream::geom_stream(alpha = 0.75, type = "ridge") +
+  scale_fill_colorblind() +
+  scale_color_colorblind() +
+  scale_y_continuous(labels = scales::label_dollar()) +
+  labs(x = "Año", y = "Renta per cápita mundial",
+       title = "Evolución de gapminder") +
+  theme_minimal()
+```
+
+Streamcharts: Sin modo espejo, forma relativa (type = "proportional")
+
+```{r}
+ggplot(gapminder |> 
+         summarise(mean_gdp = mean(gdpPercap), 
+                   .by = c(continent, year)),  
+       aes(x = year, y = mean_gdp, 
+           fill = continent, color = continent)) +
+  ggstream::geom_stream(alpha = 0.75, type = "proportional") +
+  scale_fill_colorblind() +
+  scale_color_colorblind() +
+  scale_y_continuous(labels = scales::label_dollar()) +
+  labs(x = "Año", y = "Renta per cápita mundial",
+       title = "Evolución de gapminder") +
+  theme_minimal()
+```
+
+## Gráficos interactivos
+
+```{r}
+gg <-
+  ggplot(data, aes(x = date, y = value)) +
+  geom_line(color = "#145412", linewidth = 1) +
+  geom_area(alpha = 0.4, fill = "#145412") +
+  scale_x_date(date_breaks = "4 months") +
+  scale_y_continuous(labels = scales::label_dollar()) +
+  labs(x = "Fecha", y = "Precio del bitcoin",
+       title = "Evolución del precio del bitcoin") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30))
+plotly::ggplotly(gg)
+```
+
+Se realiza un diagrama de dispersión, esperanza de vida vs renta per capita. El color depende del continente, el tamaño depende de la poblacion, el tamaño no aparece en la leyenda, escala logaritmica en eje y personalizado. Además debe ser un gráfico interactivo que al situar el cursor aparezca el dato del continente y la renta per cápita.
+
+```{r}
+#| warning: false
+#| message: false
+gapminder_1997 <- gapminder |>  
+  filter(year == 1997)
+grafico <- 
+  gapminder_1997 |> 
+  ggplot(aes(lifeExp, gdpPercap)) +
+  geom_point(aes(color = continent, size = pop, 
+             text = glue("Continente: {continent} \n Renta per cápita: {gdpPercap}"))) +
+  stat_smooth(method = "lm", color = "black", se = FALSE) + 
+  guides(size = "none") + 
+  scale_y_log10() + 
+  ggthemes::scale_color_colorblind() + 
+  labs(title = "Esperanza de vida VS PIB per cápita",
+       subtitle = "gapminder",
+       caption = "A. Moreno-Ribera",
+       color = "Continente", 
+       x = "PIB per cápita",
+       y = "Esperanza de vida") + 
+  theme_minimal()
+plotly::ggplotly(grafico, tooltip = "text")
+```
+
+**Más información de gráficos interactivos**
+
+-   `library(ggriraf)`: para gráficos interactivos pero por pares que los que vas tocando en uno se modifica en otro.
+
+-   `library(patchwork)`: para pegar una gráfica al lado de otra
+
+# Factores
+
+## Creación variable tipo factor
+
+```{r}
+estado <-
+  c("leve", "grave", "sano", "sano", "leve", "sano", "sano", "grave","grave", "leve", "grave", "sano", "sano")
+estado
+class(estado)
+
+estado_fct <-
+  tibble(paciente = 1:length(estado),
+         estado = factor(estado,
+                         levels = c("sano", "leve", "grave"),
+                         ordered = TRUE))
+estado_fct |> pull(estado)
+```
+
+## Eliminar nivel no usado
+
+```{r}
+estado_fct |> 
+  filter(estado %in% c("sano", "leve")) |> 
+  mutate(estado = fct_drop(estado)) |> 
+  pull(estado)
+```
+
+## Añadir nivel
+
+```{r}
+estado_fct |> 
+  mutate(estado = fct_expand(estado, c("UCI", "fallecido"))) |> 
+  pull(estado)
+```
+
+## Asignar nivel a los NA
+
+```{r}
+fct_explicit_na(factor(c("a", "b", NA)))
+```
+
+## Reordenar niveles
+
+```{r}
+estado_fct_expand <- 
+  estado_fct |> 
+  mutate(estado = fct_expand(estado, c("UCI", "fallecido"))) |> 
+  pull(estado)
+
+estado_fct_expand |>
+  fct_relevel(c("fallecido", "leve", "sano", "grave", "UCI"))
+```
+
+## Contar en factores: fct_count()
+
+```{r}
+estado_fct |> 
+  mutate(estado = fct_expand(estado, c("UCI", "fallecido"))) |> 
+  pull(estado) |> 
+  fct_count()
+```
+
+## Ordenar por frecuencia
+
+```{r}
+estado_fct |> 
+  mutate(estado = fct_infreq(estado)) |> 
+  pull(estado) |> 
+  fct_count()
+```
+
+## Agrupar niveles
+
+**Por cantidad mínima**
+
+A veces querremos agrupar niveles, por ejemplo, no permitiendo niveles que no sucedan un mínimo de veces con fct_lump_min(.., min = ..) (las observaciones que no lo cumplan irán a un nivel genérico llamado Other, aunque se puede cambiar con el argumento other_level).
+
+```{r}
+estado_fct |> 
+  pull(estado) |> 
+  fct_lump_min(min = 4,
+               other_level = "otros")
+```
+
+**Por frecuencia relativa mínima**
+
+Podemos hacer algo equivalente pero en función de su frecuencia relativa con fct_lump_prop().
+
+```{r}
+estado_fct |> 
+  pull(estado) |> 
+  fct_lump_prop(prop = 0.4,
+                other_level = "otros")
+```
+
+**Recategorizar variables**
+
+```{r}
+starwars |> 
+  drop_na(species) |> 
+  mutate(species =
+           fct_lump_min(species, min = 3,
+                        other_level = "Otras")) |> 
+  count(species)
+```
+
+## Reordenar niveles por otra variable
+
+```{r}
+starwars_factor <- 
+  starwars |> 
+  drop_na(height, species) |> 
+  mutate(species =
+           fct_lump_min(species, min = 3,
+                        other_level = "Otras"))
+
+starwars_factor |> pull(species)
+
+starwars_factor |>
+  mutate(species = fct_reorder(species, height, mean)) |> 
+  pull(species)
+```
+
+## Tu turno 15: factores
+
+> Dada la variable meses definida debajo (definida como un vector de caracteres), convierte dicha variable a factor (solo eso)
+
+```{r}
+meses <- c("Ene", "Feb", "Mar", "Abr")
+meses_fct <- as_factor(meses)
+```
+
+> Dada la variable meses definida debajo convierte dicha variable a factor pero indicando los niveles de forma correcta.
+
+```{r}
+meses <- c(NA, "Abr", "Ene", "Oct", "Jul", "Ene", "Sep", NA, "Feb", "Dic","Jul", "Mar", "Ene", "Mar", "Feb", "Abr", "May", "Oct", "Sep",  NA,"Dic", "Jul", "Nov", "Feb", "Oct", "Jun", "Sep", "Oct", "Oct", "Sep")
+
+meses_fct <- factor(meses, ordered = TRUE, levels =  c("Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"))
+
+meses_fct
+```
+
+> Cuenta cuantos valores hay de cada mes pero teniendo en cuenta que son factores (quizás haya niveles sin ser usados y de los que debería obtener un 0).
+
+```{r}
+meses_fct |> fct_count()
+```
+
+> Dado que hay ausentes, indica que los ausentes sea un decimotercer nivel etiquetado como "ausente".
+
+```{r}
+meses_fct <- meses_fct |>  fct_explicit_na(na_level = "ausente")
+```
+
+> Elimina los niveles no usados.
+
+```{r}
+meses_fct <- meses_fct |> fct_drop()
+```
+
+> Ordena los niveles por frecuencia de aparición.
+
+```{r}
+meses_fct |> fct_infreq()
+```
+
+> Agrupa niveles de forma que todo nivel que no aparezca al menos el 7% de las veces se agrupe en un nivel llamado "otros meses"
+
+```{r}
+meses_fct |> fct_lump_prop(prop = 0.07,
+                other_level = "otros meses")
+```
+
+# Relacionando datos
+
+Al trabajar con datos no siempre tendremos la información en una sola tabla y a veces nos interesará cruzar la información de distintas fuentes.
+
+Para ello usaremos un clásico de todo lenguaje que maneja datos: los famosos join, una herramienta que nos va a permitir cruzar una o variables tablas, haciendo uso de una columna identificadora de cada una de ellas.
+
+**Tipos de join**
+
+-   inner_join(): solo sobreviven los registros con id en ambas tablas.
+
+-   full_join(): mantiene todos los registros de ambas tablas.
+
+-   left_join(): mantiene todos los registros de la primera tabla, y busca cuales tienen id también en la segunda (en caso de no tenerlo se rellena con NA los campos de la 2ª tabla).
+
+-   right_join(): mantiene todos los registros de la segunda tabla, y busca cuales tienen id también en la primera.
+
+**Código**
+
+```{r}
+#| eval: false
+tabla_1 |>
+  xxx_join(tabla_2, by = id)
+```
+
+**Ejemplo**
+
+```{r}
+tb_1 <- tibble("key" = 1:3, "val_x" = c("x1", "x2", "x3"))
+tb_2 <- tibble("key" = c(1, 2, 4), "val_y" = c("y1", "y2", "y3"))
+tb_1
+tb_2
+```
+
+## Left join
+
+Imagina que queremos incorporar a tb_1 la información de la tabla_2, identificando los registros por la columna key (indicando con by = "key" la columna por la que tiene que cruzar): queremos mantener todos los registros de la primera tabla y buscar cuales tienen id (mismo valor en key) también en la segunda tabla.
+
+```{r}
+tb_1  |> 
+  left_join(tb_2, by = "key")
+```
+
+Fíjate que los registros de la primera cuya key no ha encontrado en la segunda les ha dado el valor de ausente.
+
+## Right join
+
+El right_join() realizará la operación contraria: vamos ahora a incorporar a tb_2 la información de la tabla_2, identificando los registros por la columna key (indicando con by = "key" la columna por la que tiene que cruzar): queremos mantener todos los registros de la segunda y buscar cuales tienen id (mismo valor en key) también en la primera tabla.
+
+```{r}
+tb_1 |> 
+  right_join(tb_2, by = "key")
+```
+
+Fíjate que ahora los registros de la segunda cuya key no ha encontrado en la primera son los que les ha dado el valor de ausente.
+
+## Claves y sufijos
+
+Las columnas clave que usaremos para el cruce no siempre se llamarán igual.
+
+by = c("key_2" = "key_2"): le indicaremos en qué columna de cada tabla están las claves por las que vamos a cruzar.
+
+```{r}
+tb_1 <- tibble("key_1" = 1:3, "val_x" = c("x1", "x2", "x3"))
+tb_2 <- tibble("key_2" = c(1, 2, 4), "val_y" = c("y1", "y2", "y3"))
+
+# Left
+tb_1 |> 
+  left_join(tb_2, by = c("key_1" = "key_2"))
+
+# Right
+tb_1  |> 
+  right_join(tb_2, by = c("key_1" = "key_2"))
+```
+
+## Cruzar por varias columnas
+
+```{r}
+tb_1 <- tibble("k_11" = 1:3, 
+               "k_12" = c("a", "b", "c"),  
+               "val_x" = c("x1", "x2", "x3"))
+tb_2 <- tibble("k_21" = c(1, 2, 4), 
+               "k_22" = c("a", "b", "e"), 
+               "val_y" = c("y1", "y2", "y3"))
+```
+
+```{r}
+# Left
+tb_1 |> 
+  left_join(tb_2,
+            by = c("k_11" = "k_21", "k_12" = "k_22"))
+```
+
+## 2 columnas con mismo nombre (no id)
+
+También podría suceder que al cruzar dos tablas, haya columnas de valores que se llamen igual.
+
+```{r}
+tb_1 <- tibble("key_1" = 1:3, "val" = c("x1", "x2", "x3"))
+tb_2 <- tibble("key_2" = c(1, 2, 4), "val" = c("y1", "y2", "y3"))
+
+# Left
+tb_1 |> 
+  left_join(tb_2, by = c("key_1" = "key_2"))
+```
+
+Por defecto nos añade los sufijos .x y .y para indicarnos de que tabla vienen. Dicho sufijo podemos especificárselo en el argumento opcional suffix = ..., que nos permita distinguir las variables de una tabla y de otra.
+
+```{r}
+# Left
+tb_1 |>
+  left_join(tb_2, by = c("key_1" = "key_2"), 
+            suffix = c("_tabla1", "_tabla2"))
+```
+
+## Full join
+
+Los dos anteriores casos forman lo que se conoce como outer joins: cruces donde se mantienen observaciones que salgan en al menos una tabla. El tercer outer join es el conocido como full_join() que nos mantendrá las observaciones de ambas tablas, añadiendo las filas que no casen con la otra tabla.
+
+```{r}
+tb_1 |> 
+  full_join(tb_2, by = c("key_1" = "key_2"))
+```
+
+## Inner join
+
+Frente a los outer join está lo que se conoce como inner join, con inner_join(): un cruce en el que solo se mantienen las observaciones que salgan en ambas tablas, solo mantiene aquellos registros matcheados.
+
+```{r}
+tb_1 |> 
+  inner_join(tb_2, by = c("key_1" = "key_2"))
+```
+
+En términos de registros, inner_join si es conmutativa, nos da igual el orden de las tablas: lo único que cambia es el orden de las columnas que añade.
+
+```{r}
+tb_2 |> 
+  inner_join(tb_1, by = c("key_2" = "key_1"))
+```
+
+## Anti/semi join
+
+Por último tenemos dos herramientas interesantes para filtrar (no cruzar) registros: semi_join() y anti_join(). El semi join nos deja en la primera tabla los registros que cuya clave está también en la segunda (como un inner join pero sin añadir la info de la segunda tabla). Y el segundo, los anti join, hace justo lo contrario (aquellos que no están).
+
+```{r}
+# semijoin
+tb_1 |> 
+  semi_join(tb_2, by = c("key_1" = "key_2"))
+
+# antijoin
+tb_1 |> 
+  anti_join(tb_2, by = c("key_1" = "key_2"))
+```
+
+## Tu turno 16: joins
+
+> Para los ejercicios usaremos las tablas disponibles en el paquete {nycflights13} (echa un vistazo antes)
+
+```{r}
+library(nycflights13)
+```
+
+-   airlines: nombre de aerolíneas (con su abreviatura).
+-   airports: datos de aeropuertos (nombres, longitud, latitud, altitud, etc).
+-   flights: datos de vuelos.
+-   planes: datos de los aviones.
+-   weather: datos meteorológicos horarios de las estaciones LGA, JFK y EWR.
+
+> Del paquete {nycflights13} cruza la tabla flights con airlines. Queremos mantener todos los registros de vuelos, añadiendo la información de las aerolíneas a la tabla de aviones.
+
+```{r}
+flights 
+airlines
+flights_airlines <- 
+  flights |> 
+  left_join(airlines, by = "carrier")
+flights_airlines
+```
+
+> A la tabla obtenida del cruce del apartado anterior, cruza después con los datos de los aviones en planes, pero incluyendo solo aquellos vuelos de los que tengamos información de sus aviones (y viceversa).
+
+```{r}
+flights_airlines_planes <- 
+  flights_airlines |> 
+  inner_join(planes, by = "tailnum")
+flights_airlines_planes
+```
+
+> Repite el ejercicio anterior pero conservando ambas variables year (en una es el año del vuelo, en la otra es el año de construcción del avión), y distinguiéndolas entre sí
+
+```{r}
+flights_airlines_planes <- 
+  flights_airlines |> 
+  inner_join(planes, by = "tailnum",
+             suffix = c("_flight", "_build_aircraft"))
+flights_airlines_planes
+```
+
+> Al cruce obtenido del ejercicio anterior incluye la longitud y latitud de los aeropuertos en airports, distinguiendo entre la latitud/longitud del aeropuerto en destino y en origen.
+
+```{r}
+flights_airlines_planes |> 
+  left_join(airports |> select(faa, lat, lon),
+            by = c("origin" = "faa")) |> 
+  rename(lat_origin = lat, lon_origin = lon) |> 
+  left_join(airports |> select(faa, lat, lon),
+            by = c("dest" = "faa")) |> 
+  rename(lat_dest = lat, lon_dest = lon)
+```
+
+> Filtra de airports solo aquellos aeropuertos de los que salgan vuelos. Repite el proceso filtrado solo aquellos a los que lleguen vuelos
+
+```{r}
+airports |>  
+  semi_join(flights, by = c("faa" = "origin"))
+airports |>  
+  semi_join(flights, by = c("faa" = "dest"))
+```
+
+> ¿De cuántos vuelos no disponemos información del avión? Elimina antes los vuelos que no tengan identificar (diferente a NA) del avión
+
+```{r}
+flights |> 
+  drop_na(tailnum) |> 
+  anti_join(planes, by = "tailnum") |> 
+  count(tailnum, sort = TRUE)
+```
+
+# Depuración
+
+```{r}
+library(skimr)
+iris |> skim()
+starwars |> skim()
+```
+
+```{r}
+library(fastDummies)
+
+starwars_lm <- 
+  starwars |> 
+  select(where(is.numeric), sex) |> 
+  drop_na() |> 
+  fastDummies::dummy_cols(select_columns = "sex", remove_first_dummy = TRUE, remove_selected_columns = TRUE)
+
+
+starwars_lm |>  lm(formula = mass ~ .) |> summary()
+```
+
+## Árboles de aislamiento
+
+```{r}
+library(solitude)
+```

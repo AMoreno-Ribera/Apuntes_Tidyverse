@@ -26,6 +26,8 @@ library(sysfonts) # Cambiar el tipo de letra en los gráficos
 library(skimr) # Librería para análisis exploratorio mucho mejor que con summary(), también da información de los missing y un poco más de info en las categóricas
 ```
 
+Apuntes realizados por Almudena Moreno Ribera para la asignatura de Software Estadístico para la gestión de bases de datos en el máster oficial de Bioestadística de la Universidad Complutense de Madrid. 
+
 # Introducción y curiosidades de R
 
 ## Paste vs glue
@@ -3612,11 +3614,8 @@ starwars_lm <-
 starwars_lm |>  lm(formula = mass ~ .) |> summary()
 ```
 
-
-
 ## Árboles de aislamiento
 
 ```{r}
 library(solitude)
 ```
-
